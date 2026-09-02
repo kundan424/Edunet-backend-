@@ -1,0 +1,25 @@
+﻿version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: edtech-postgres
+    environment:
+      POSTGRES_DB: edtech_db
+      POSTGRES_USER: edtech_user
+      POSTGRES_PASSWORD: edtech_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - edtech-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edtech_user -d edtech_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  edtech-postgres-data:
+    name: edtech-postgres-data
