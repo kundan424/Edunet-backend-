@@ -1,6 +1,5 @@
 package com.edtech.platform.enrollment;
 
-import com.edtech.platform.auth.service.JwtService;
 import com.edtech.platform.course.entity.Course;
 import com.edtech.platform.course.enums.CourseDifficulty;
 import com.edtech.platform.course.enums.PublishStatus;
@@ -26,6 +25,7 @@ import java.math.BigDecimal;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -47,12 +47,9 @@ public class EnrollmentTest {
     @Autowired
     private EnrollmentRepository enrollmentRepository;
 
-    @Autowired
-    private JwtService jwtService;
-
     private User student;
     private User instructor;
-    private String token;
+    private com.edtech.platform.common.security.UserDetailsImpl studentDetails;
 
     @BeforeEach
     void setUp() {
@@ -76,8 +73,7 @@ public class EnrollmentTest {
         instructor.setStatus(UserStatus.ACTIVE);
         instructor = userRepository.save(instructor);
 
-        token = jwtService.generateToken(new com.edtech.platform.common.security.UserDetailsImpl(
-                student.getId(), student.getEmail(), student.getPasswordHash(), student.getRole(), student.getStatus()));
+        studentDetails = com.edtech.platform.common.security.UserDetailsImpl.build(student);
     }
 
     @Test
@@ -85,7 +81,7 @@ public class EnrollmentTest {
         Course course = createCourse(BigDecimal.ZERO, PublishStatus.PUBLISHED);
 
         mockMvc.perform(post("/api/v1/courses/" + course.getId() + "/enroll")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .with(user(studentDetails)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.courseId").value(course.getId().toString()))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
@@ -104,7 +100,7 @@ public class EnrollmentTest {
         enrollmentRepository.save(enrollment);
 
         mockMvc.perform(post("/api/v1/courses/" + course.getId() + "/enroll")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .with(user(studentDetails)))
                 .andExpect(status().isConflict());
     }
 
@@ -121,7 +117,7 @@ public class EnrollmentTest {
         Course course = createCourse(new BigDecimal("10.00"), PublishStatus.PUBLISHED);
 
         mockMvc.perform(post("/api/v1/courses/" + course.getId() + "/enroll")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .with(user(studentDetails)))
                 .andExpect(status().isBadRequest());
     }
 
@@ -130,7 +126,7 @@ public class EnrollmentTest {
         Course course = createCourse(BigDecimal.ZERO, PublishStatus.DRAFT);
 
         mockMvc.perform(post("/api/v1/courses/" + course.getId() + "/enroll")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .with(user(studentDetails)))
                 .andExpect(status().isForbidden());
     }
 
@@ -144,7 +140,7 @@ public class EnrollmentTest {
         enrollmentRepository.save(enrollment);
 
         mockMvc.perform(get("/api/v1/courses/" + course.getId() + "/learn")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .with(user(studentDetails)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(course.getId().toString()))
                 .andExpect(jsonPath("$.title").value(course.getTitle()));
@@ -155,7 +151,7 @@ public class EnrollmentTest {
         Course course = createCourse(BigDecimal.ZERO, PublishStatus.PUBLISHED);
 
         mockMvc.perform(get("/api/v1/courses/" + course.getId() + "/learn")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .with(user(studentDetails)))
                 .andExpect(status().isForbidden());
     }
 
