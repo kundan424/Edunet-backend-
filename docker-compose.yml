@@ -1,4 +1,4 @@
-﻿version: '3.9'
+version: '3.9'
 
 services:
   postgres:
@@ -14,10 +14,30 @@ services:
       - edtech-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U edtech_user -d edtech_db"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
       start_period: 10s
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edtech-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=edtech_db
+      - DB_USERNAME=edtech_user
+      - DB_PASSWORD=edtech_pass
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "8080:8080"
     restart: unless-stopped
 
 volumes:

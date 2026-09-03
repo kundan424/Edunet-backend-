@@ -1,0 +1,9 @@
+CREATE TABLE instructor_profiles (
+    id UUID PRIMARY KEY,
+    user_id UUID UNIQUE NOT NULL REFERENCES users(id),
+    bio TEXT,
+    expertise VARCHAR(255),
+    verification_status VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

@@ -15,3 +15,9 @@ spring:
 logging:
   level:
     com.edtech: DEBUG
+
+edtech:
+  jwt:
+    # This is a non-production test-only secret for deterministic tests
+    secret: this-is-a-test-secret-key-that-is-at-least-256-bits-long
+    expiration-ms: 3600000
