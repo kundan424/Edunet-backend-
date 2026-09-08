@@ -14,6 +14,7 @@ import java.util.UUID;
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
     boolean existsByUserIdAndCourseId(UUID userId, UUID courseId);
+    Optional<Enrollment> findByUserIdAndCourseId(UUID userId, UUID courseId);
 
     @Query(value = "SELECT e FROM Enrollment e JOIN FETCH e.course WHERE e.user.id = :userId",
            countQuery = "SELECT count(e) FROM Enrollment e WHERE e.user.id = :userId")

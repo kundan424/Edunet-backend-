@@ -71,7 +71,7 @@ public class InstructorProfileService {
 
     @Transactional
     public void approveVerification(UUID instructorId) {
-        InstructorProfile profile = instructorProfileRepository.findById(instructorId)
+        InstructorProfile profile = instructorProfileRepository.findByUserId(instructorId)
                 .orElseThrow(InstructorProfileNotFoundException::new);
 
         if (profile.getVerificationStatus() != VerificationStatus.PENDING) {
@@ -84,7 +84,7 @@ public class InstructorProfileService {
 
     @Transactional
     public void rejectVerification(UUID instructorId) {
-        InstructorProfile profile = instructorProfileRepository.findById(instructorId)
+        InstructorProfile profile = instructorProfileRepository.findByUserId(instructorId)
                 .orElseThrow(InstructorProfileNotFoundException::new);
 
         if (profile.getVerificationStatus() != VerificationStatus.PENDING) {

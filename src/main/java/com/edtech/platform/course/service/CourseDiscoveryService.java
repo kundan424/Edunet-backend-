@@ -95,6 +95,7 @@ public class CourseDiscoveryService {
                                         .description(lesson.getDescription())
                                         .lessonType(lesson.getLessonType())
                                         .displayOrder(lesson.getDisplayOrder())
+                                        .durationSeconds(lesson.getDurationSeconds())
                                         .build())
                                 .toList())
                         .build())

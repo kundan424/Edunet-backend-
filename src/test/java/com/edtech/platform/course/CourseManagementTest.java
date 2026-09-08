@@ -222,4 +222,29 @@ public class CourseManagementTest {
                         .with(user(userDetails)))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void testMissingInstructorProfileCannotPublish() throws Exception {
+        // Delete the profile completely to simulate skipping onboarding
+        instructorProfileRepository.deleteAll();
+
+        CourseCreateRequest courseReq = new CourseCreateRequest();
+        courseReq.setTitle("Draft No Profile");
+        courseReq.setDifficulty(CourseDifficulty.BEGINNER);
+        courseReq.setPrice(new BigDecimal("0.00"));
+
+        MvcResult courseResult = mockMvc.perform(post("/api/v1/instructors/courses")
+                        .with(user(userDetails))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(courseReq)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String courseId = objectMapper.readTree(courseResult.getResponse().getContentAsString()).get("data").get("id").asText();
+
+        mockMvc.perform(post("/api/v1/instructors/courses/" + courseId + "/submit")
+                        .with(user(userDetails)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.message").value("Instructor onboarding/profile creation is required before submitting a course"));
+    }
 }

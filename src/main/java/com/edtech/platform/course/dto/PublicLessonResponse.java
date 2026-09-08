@@ -18,4 +18,5 @@ public class PublicLessonResponse {
     private String description;
     private LessonType lessonType;
     private Integer displayOrder;
+    private Integer durationSeconds;
 }

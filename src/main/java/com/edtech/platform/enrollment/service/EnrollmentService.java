@@ -48,7 +48,23 @@ public class EnrollmentService {
             throw new EdTechException(ErrorCode.VALIDATION_FAILED, "Paid enrollment not supported");
         }
 
-        if (enrollmentRepository.existsByUserIdAndCourseId(userId, courseId)) {
+        return createEnrollment(userId, course);
+    }
+
+    @Transactional
+    public EnrollmentResponseDTO enrollPaidStudent(UUID userId, UUID courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course", courseId));
+
+        if (course.getPublishStatus() != PublishStatus.PUBLISHED) {
+            throw new EdTechException(ErrorCode.COURSE_NOT_PUBLISHED, "Course is not published");
+        }
+
+        return createEnrollment(userId, course);
+    }
+
+    private EnrollmentResponseDTO createEnrollment(UUID userId, Course course) {
+        if (enrollmentRepository.existsByUserIdAndCourseId(userId, course.getId())) {
             throw new EdTechException(ErrorCode.ALREADY_ENROLLED, "You are already enrolled in this course");
         }
 
@@ -60,7 +76,7 @@ public class EnrollmentService {
         enrollment.setCourse(course);
         enrollment = enrollmentRepository.save(enrollment);
 
-        courseRepository.incrementStudentCount(courseId);
+        courseRepository.incrementStudentCount(course.getId());
 
         return mapToDTO(enrollment);
     }

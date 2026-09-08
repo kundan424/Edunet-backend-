@@ -33,6 +33,9 @@ public class Lesson {
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
 
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

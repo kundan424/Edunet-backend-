@@ -53,10 +53,6 @@ public class EnrollmentTest {
 
     @BeforeEach
     void setUp() {
-        enrollmentRepository.deleteAll();
-        courseRepository.deleteAll();
-        userRepository.deleteAll();
-
         student = new User();
         student.setEmail("student@test.com");
         student.setPasswordHash("hash");

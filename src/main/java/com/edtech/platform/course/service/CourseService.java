@@ -74,7 +74,8 @@ public class CourseService {
     @Transactional
     public void submitForApproval(UUID instructorId, UUID courseId) {
         InstructorProfile profile = instructorProfileRepository.findByUserId(instructorId)
-                .orElseThrow(() -> new EdTechException(ErrorCode.INSTRUCTOR_PROFILE_NOT_FOUND, "Instructor profile not found"));
+                .orElseThrow(() -> new EdTechException(ErrorCode.INSTRUCTOR_NOT_VERIFIED, "Instructor onboarding/profile creation is required before submitting a course"));
+
         
         if (profile.getVerificationStatus() != VerificationStatus.VERIFIED) {
             throw new EdTechException(ErrorCode.INSTRUCTOR_NOT_VERIFIED, "Instructor must be VERIFIED to publish courses");

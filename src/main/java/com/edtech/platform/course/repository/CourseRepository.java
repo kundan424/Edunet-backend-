@@ -15,7 +15,7 @@ import java.util.UUID;
 public interface CourseRepository extends JpaRepository<Course, UUID>, JpaSpecificationExecutor<Course> {
     List<Course> findByInstructorId(UUID instructorId);
 
-    @EntityGraph(attributePaths = {"sections", "sections.lessons"})
+    @EntityGraph(attributePaths = {"sections"})
     Optional<Course> findByIdAndPublishStatus(UUID id, PublishStatus status);
 
     @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)

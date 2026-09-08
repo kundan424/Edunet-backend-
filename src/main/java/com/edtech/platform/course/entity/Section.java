@@ -31,6 +31,7 @@ public class Section {
     private Integer displayOrder;
 
     @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
+    @org.hibernate.annotations.BatchSize(size = 50)
     private List<Lesson> lessons = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)

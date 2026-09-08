@@ -14,4 +14,5 @@ public class LessonRequest {
     private LessonType lessonType;
     @NotNull
     private Integer displayOrder;
+    private Integer durationSeconds;
 }

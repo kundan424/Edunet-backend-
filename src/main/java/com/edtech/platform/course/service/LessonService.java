@@ -33,6 +33,7 @@ public class LessonService {
         lesson.setDescription(request.getDescription());
         lesson.setLessonType(request.getLessonType());
         lesson.setDisplayOrder(request.getDisplayOrder());
+        lesson.setDurationSeconds(request.getDurationSeconds());
         lesson = lessonRepository.save(lesson);
         return mapToResponse(lesson);
     }
@@ -55,6 +56,7 @@ public class LessonService {
         lesson.setDescription(request.getDescription());
         lesson.setLessonType(request.getLessonType());
         lesson.setDisplayOrder(request.getDisplayOrder());
+        lesson.setDurationSeconds(request.getDurationSeconds());
         lesson = lessonRepository.save(lesson);
         return mapToResponse(lesson);
     }
@@ -84,6 +86,7 @@ public class LessonService {
         response.setDescription(lesson.getDescription());
         response.setLessonType(lesson.getLessonType());
         response.setDisplayOrder(lesson.getDisplayOrder());
+        response.setDurationSeconds(lesson.getDurationSeconds());
         response.setCreatedAt(lesson.getCreatedAt());
         response.setUpdatedAt(lesson.getUpdatedAt());
         return response;

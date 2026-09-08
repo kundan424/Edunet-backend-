@@ -50,6 +50,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/payments/stripe/webhook").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/courses/*/enroll").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/courses/*/learn").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/courses/**").permitAll()

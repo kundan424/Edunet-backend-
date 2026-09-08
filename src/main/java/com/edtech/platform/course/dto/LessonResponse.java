@@ -13,6 +13,7 @@ public class LessonResponse {
     private String description;
     private LessonType lessonType;
     private Integer displayOrder;
+    private Integer durationSeconds;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
