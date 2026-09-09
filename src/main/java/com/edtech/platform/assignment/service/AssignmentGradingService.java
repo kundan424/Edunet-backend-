@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class AssignmentGradingService {
     private final AssignmentSubmissionRepository submissionRepository;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     private void validateInstructorOwnership(UUID instructorId, UUID courseId) {
         Course course = courseRepository.findById(courseId)
@@ -102,6 +104,10 @@ public class AssignmentGradingService {
         submission.setGradedAt(LocalDateTime.now());
 
         submission = submissionRepository.save(submission);
+        
+        applicationEventPublisher.publishEvent(new com.edtech.platform.assignment.event.AssignmentGradedEvent(
+                submission.getUser().getId(), submission.getId(), assignment.getTitle()));
+                
         return mapToInstructorResponse(submission);
     }
 

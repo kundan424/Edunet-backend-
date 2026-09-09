@@ -48,6 +48,9 @@ public class Course {
     @Column(name = "student_count")
     private Integer studentCount = 0;
 
+    @Column(name = "review_count")
+    private Integer reviewCount = 0;
+
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Section> sections = new ArrayList<>();
 

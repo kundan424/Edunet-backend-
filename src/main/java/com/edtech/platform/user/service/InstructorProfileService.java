@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +26,7 @@ public class InstructorProfileService {
 
     private final InstructorProfileRepository instructorProfileRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public InstructorProfileResponse createOrUpdateProfile(UUID userId, InstructorProfileRequest request) {
@@ -80,6 +82,9 @@ public class InstructorProfileService {
 
         profile.setVerificationStatus(VerificationStatus.VERIFIED);
         instructorProfileRepository.save(profile);
+        
+        applicationEventPublisher.publishEvent(new com.edtech.platform.user.event.InstructorVerifiedEvent(
+                profile.getUser().getId(), profile.getId()));
     }
 
     @Transactional

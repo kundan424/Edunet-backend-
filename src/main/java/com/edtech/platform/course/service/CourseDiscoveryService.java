@@ -53,6 +53,7 @@ public class CourseDiscoveryService {
                 .thumbnailUrl(course.getThumbnailUrl())
                 .rating(course.getRating())
                 .studentCount(course.getStudentCount())
+                .reviewCount(course.getReviewCount())
                 .instructorId(course.getInstructorId())
                 .instructorName(instructorNames.getOrDefault(course.getInstructorId(), "Unknown Instructor"))
                 .build());
@@ -111,6 +112,7 @@ public class CourseDiscoveryService {
                 .thumbnailUrl(course.getThumbnailUrl())
                 .rating(course.getRating())
                 .studentCount(course.getStudentCount())
+                .reviewCount(course.getReviewCount())
                 .instructorId(course.getInstructorId())
                 .instructorName(instructorName)
                 .instructorBio(instructorBio)

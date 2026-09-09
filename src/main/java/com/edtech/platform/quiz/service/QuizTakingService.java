@@ -39,6 +39,7 @@ public class QuizTakingService {
     private final EnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
     private final ProgressService progressService;
+    private final org.springframework.context.ApplicationEventPublisher applicationEventPublisher;
 
     private void validateEnrollment(UUID userId, UUID courseId) {
         if (!enrollmentRepository.existsByUserIdAndCourseId(userId, courseId)) {
@@ -173,6 +174,9 @@ public class QuizTakingService {
         
         // Update progress via ProgressService
         progressService.completeLesson(userId, courseId, quiz.getLesson().getId());
+        
+        applicationEventPublisher.publishEvent(new com.edtech.platform.quiz.event.QuizCompletedEvent(
+                userId, attempt.getId(), quiz.getTitle(), attempt.getPercentage()));
         
         return mapToResponse(attempt);
     }

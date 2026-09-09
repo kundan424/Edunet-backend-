@@ -23,6 +23,7 @@ public class CourseSummaryResponse {
     private String thumbnailUrl;
     private BigDecimal rating;
     private Integer studentCount;
+    private Integer reviewCount;
     private UUID instructorId;
     private String instructorName;
 }

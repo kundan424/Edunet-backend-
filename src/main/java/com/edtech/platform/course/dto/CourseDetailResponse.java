@@ -24,6 +24,7 @@ public class CourseDetailResponse {
     private String thumbnailUrl;
     private BigDecimal rating;
     private Integer studentCount;
+    private Integer reviewCount;
     private UUID instructorId;
     private String instructorName;
     private String instructorBio;

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class StripeWebhookService {
     private final PaymentRepository paymentRepository;
     private final StripeEventRepository stripeEventRepository;
     private final EnrollmentService enrollmentService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Value("${edtech.stripe.webhook-secret}")
     private String webhookSecret;
@@ -93,9 +95,19 @@ public class StripeWebhookService {
         try {
             enrollmentService.enrollPaidStudent(payment.getUserId(), payment.getCourseId());
             log.info("Successfully enrolled user {} in course {}", payment.getUserId(), payment.getCourseId());
+            
+            applicationEventPublisher.publishEvent(new com.edtech.platform.payment.event.PaymentSucceededEvent(
+                    payment.getUserId(), payment.getCourseId(), payment.getId(), "Course"));
+        } catch (com.edtech.platform.common.exception.EdTechException e) {
+            if (e.getErrorCode() == com.edtech.platform.common.exception.ErrorCode.ALREADY_ENROLLED) {
+                log.info("User {} is already enrolled in course {}. Payment marked as SUCCEEDED.", payment.getUserId(), payment.getCourseId());
+            } else {
+                log.error("EdTechException enrolling user {} in course {} after successful payment: {}", payment.getUserId(), payment.getCourseId(), e.getMessage());
+                throw e; // Rethrow to trigger rollback
+            }
         } catch (Exception e) {
-            log.error("Error enrolling user {} in course {} after successful payment", payment.getUserId(), payment.getCourseId(), e);
-            // Ideally, we'd flag this for manual review or have a dead-letter queue
+            log.error("Unexpected error enrolling user {} in course {} after successful payment", payment.getUserId(), payment.getCourseId(), e);
+            throw new RuntimeException("Failed to create enrollment, triggering rollback", e);
         }
     }
 }

@@ -14,6 +14,7 @@ import java.util.UUID;
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
     boolean existsByUserIdAndCourseId(UUID userId, UUID courseId);
+    boolean existsByUserIdAndCourseIdAndStatus(UUID userId, UUID courseId, com.edtech.platform.enrollment.enums.EnrollmentStatus status);
     Optional<Enrollment> findByUserIdAndCourseId(UUID userId, UUID courseId);
 
     @Query(value = "SELECT e FROM Enrollment e JOIN FETCH e.course WHERE e.user.id = :userId",
