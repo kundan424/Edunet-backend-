@@ -18,6 +18,8 @@ public interface CourseRepository extends JpaRepository<Course, UUID>, JpaSpecif
     @EntityGraph(attributePaths = {"sections"})
     Optional<Course> findByIdAndPublishStatus(UUID id, PublishStatus status);
 
+    org.springframework.data.domain.Page<Course> findByPublishStatus(PublishStatus status, org.springframework.data.domain.Pageable pageable);
+
     @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
     @org.springframework.data.jpa.repository.Query("UPDATE Course c SET c.studentCount = c.studentCount + 1 WHERE c.id = :courseId")
     void incrementStudentCount(@org.springframework.data.repository.query.Param("courseId") UUID courseId);

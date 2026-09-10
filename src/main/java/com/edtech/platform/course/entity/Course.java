@@ -59,6 +59,15 @@ public class Course {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+    
+    @Column(name = "reviewed_by")
+    private UUID reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
+    @Column(name = "rejection_reason", length = 1000)
+    private String rejectionReason;
 
     @PrePersist
     protected void onCreate() {
