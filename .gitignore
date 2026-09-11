@@ -77,4 +77,5 @@ logs/
 *.swp
 *.swo
 *~
+# Temporary Python scratch scripts
 *.py
