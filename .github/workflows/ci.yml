@@ -19,7 +19,7 @@ jobs:
         env:
           POSTGRES_DB: edtech_db
           POSTGRES_USER: edtech_user
-          POSTCRES_PASSWORD: edtech_pass
+          POSTGRES_PASSWORD: edtech_pass
         ports:
           - 5432:5432
         options: >-
@@ -67,7 +67,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: $x{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
 
       - name: Extract metadata (tags, labels) for Docker
@@ -86,4 +86,4 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: $x{ steps.meta.outputs.labels }}
+          labels: ${{ steps.meta.outputs.labels }}
