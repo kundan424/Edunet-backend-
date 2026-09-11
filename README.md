@@ -1,86 +1,27 @@
-﻿# EdTech Learning & Teaching Platform
+# EdTech Platform Backend
 
-A portfolio-grade EdTech platform inspired by Udemy/Coursera, built with Spring Boot as a modular monolith.
+Spring Boot 3.x and Java 21 modular monolith for an e-learning platform.
 
-## Technology Stack
+## overview
+This is the backend API driving course descovery, enrollment, video media progress, quizzes, assignments, and Stripe payments. It employs JWT-based security with RBAC (Students, Instructors, Admins).
 
-| Layer | Technology |
-|-------|------------|
-| Language | Java 21 |
-| Framework | Spring Boot 3.3.x |
-| Security | Spring Security + JWT |
-| Persistence | Spring Data JPA + Hibernate |
-| Database | PostgreSQL 16 |
-| Migrations | Flyway |
-| Build | Maven (Maven Wrapper) |
-| Containers | Docker + Docker Compose |
-| Testing | JUnit 5 + Testcontainers |
+## Tech Stack
+- **Core**: Java 21, Spring Boot 3.x
+- **Database**: PostgreSQL with Flyway DB migrations
+- **Auth**: JWT
+- **Payments**: Stripe
+- **Deployment**: Docker, {GitHub Actions CI}
 
-## Architecture
+## Deployment & Architecture
+Please read our in-depth guides:
+- [Deployment Guide](docs/deployment.md)
+- [Architecture Decisions](docs/architecture.md)
 
-Modular monolith with clearly separated domain modules:
+## CI/CD Overview
+We use GitHub Actions (.workflows/ci.yml) to enforce:
+1. Strict Maven compilation
+2. 100% Test pass rate against a live PostgreSQL test container
+. Docker image build and push to GHCR on `main` branch.
 
-- **auth** — Registration, login, JWT
-- **user** — User/instructor profiles
-- **course** — Course & curriculum management
-- **enrollment** — Course enrollment
-- **progress** — Lesson/course progress tracking
-- **quiz** — Quiz authoring and attempts
-- **assignment** — Assignment submission and grading
-- **payment** — Stripe payment integration
-- **review** — Course reviews and ratings
-- **media** — Video upload and processing
-- **notification** — Event-driven notifications
-- **admin** — Administrative operations
-- **search** — Course discovery and search
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
-
-## Prerequisites
-
-- Java 21+
-- Docker & Docker Compose
-- Maven (or use `./mvnw`)
-
-## Local Setup
-
-See [LOCAL_SETUP.md](LOCAL_SETUP.md) for full step-by-step instructions.
-
-**Quick start:**
-```bash
-# 1. Start infrastructure
-docker compose up -d
-
-# 2. Copy environment file
-cp .env.example .env
-# Edit .env with your values
-
-# 3. Run the application
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-
-# 4. Health check
-curl http://localhost:8080/api/v1/health
-```
-
-## Running Tests
-
-```bash
-./mvnw test
-```
-
-Tests use Testcontainers — Docker must be running.
-
-## API Documentation
-
-See [API.md](API.md) (populated as phases complete).
-
-## Project Status
-
-| Phase | Status | Description |
-|-------|--------|-------------|
-| Phase 0 | ✅ Complete | Project foundation |
-| Phase 1 | ⏳ Pending | Authentication & Users |
-| Phase 2 | ⏳ Pending | Instructor Onboarding |
-| Phase 3 | ⏳ Pending | Course Management |
-| Phase 4 | ⏳ Pending | Course Discovery |
-| Phase 5–20 | ⏳ Pending | See IMPLEMENTATION_PLAN.md |
+## Known Limitations
+ See `Architectures` documents. We intentionally skipped Kubernetes, Kafka, and external S3 storage for this phose to maintain a simple, reliable single-server deployment.

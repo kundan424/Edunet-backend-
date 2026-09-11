@@ -3,7 +3,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/edtech_db
     username: edtech_user
     password: edtech_pass
-    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: validate
@@ -11,6 +10,13 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+edtech:
+  media:
+    storage-type: LOCAL
+  stripe:
+    secret-key: sk_test_dummy
+    webhook-secret: whsec_test_dummy
 
 logging:
   level:

@@ -1,7 +1,10 @@
 server:
   shutdown: graceful
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   application:
     name: edtech-platform
   lifecycle:
@@ -13,7 +16,7 @@ spring:
       max-file-size: 500MB
       max-request-size: 500MB
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:edtech_db}
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:edtech_db}}
     username: ${DB_USERNAME:edtech_user}
     password: ${DB_PASSWORD:edtech_pass}
     driver-class-name: org.postgresql.Driver
@@ -43,6 +46,18 @@ spring:
     baseline-on-migrate: false
     validate-on-migrate: true
     out-of-order: false
+  mail:
+    host: ${EMAIL_HOST:localhost}
+    port: ${EMAIL_PORT:1025}
+    username: ${EMAIL_USERNAME:}
+    password: ${EMAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 management:
   endpoints:
     web:
@@ -66,9 +81,10 @@ logging:
   level:
     root: INFO
     com.edtech: INFO
+
 edtech:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+    allowed-origins: ${EDTECH_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
   jwt:
     secret: ${JWT_SECRET:dev-secret-change-in-production-must-be-256-bits}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
@@ -77,3 +93,13 @@ edtech:
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  media:
+    storage-type: ${MEDIA_STORAGE_TYPE:LOCAL}
+  r2:
+    endpoint: ${R2_ENDPOINT:}
+    bucket: ${R2_BUCKET:}
+    access-key: ${R2_ACCESS_KEY:}
+    secret-key: ${R2_SECRET_KEY:}
+    region: ${R2_REGION:auto}
+  mail:
+    from: ${EMAIL_FROM:noreply@edtech.com}

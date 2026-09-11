@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: edtech-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-edtech_db}
+      POSTGRES_USER: ${DB_USERNAME:-edtech_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432" # Only expose to localhost
+    volumes:
+      - edtech-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTRES_USER -d $$POSTRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  app:
+    image: ${APP_IMAGE}
+    container_name: edtech-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-edtech_db}
+      - DB_USERNAME=${DB_USERNAME:-edtech_user}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - EDTECH_CORS_ALLOWED_ORIGINS=${CENTER_CORS_ALLOWED_ORIGINS}
+    expose:
+      - "8080" # Only exposed internally to nginx, not to host
+    volumes:
+      - edtech-media-data:/app/data/media
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: edtech-nginx
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro # Lets Encrypt certificate mount (host -> container)
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+
+volumes:
+  edtech-postgres-data:
+    name: edtech-postgres-data
+  edtech-media-data:
+    name: edtech-media-data

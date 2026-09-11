@@ -13,7 +13,7 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("")
+    @Value("${edtech.cors.allowed-origins}")
     private String allowedOriginsRaw;
 
     @Bean
