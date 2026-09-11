@@ -11,6 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import com.edtech.platform.course.dto.CourseCurriculumResponse;
+
 import com.edtech.platform.common.response.ApiResponse;
 
 import java.util.List;
@@ -57,6 +60,29 @@ public class CourseController {
             @PathVariable UUID courseId) {
         courseService.deleteCourse(userDetails.getId(), courseId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(ApiResponse.success(null));
+    }
+
+    @GetMapping("/{courseId}/curriculum")
+    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getCourseCurriculum(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable UUID courseId) {
+        return ResponseEntity.ok(ApiResponse.success(courseService.getCourseCurriculum(userDetails.getId(), courseId)));
+    }
+
+    @PutMapping("/{courseId}/archive")
+    public ResponseEntity<ApiResponse<Void>> archiveCourse(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable UUID courseId) {
+        courseService.archiveCourse(userDetails.getId(), courseId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PutMapping("/{courseId}/unarchive")
+    public ResponseEntity<ApiResponse<Void>> unarchiveCourse(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable UUID courseId) {
+        courseService.unarchiveCourse(userDetails.getId(), courseId);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @PostMapping("/{courseId}/submit")

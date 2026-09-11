@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import com.edtech.platform.course.dto.LessonReorderRequest;
+
 import com.edtech.platform.common.response.ApiResponse;
 
 import java.util.List;
@@ -47,6 +50,16 @@ public class LessonController {
             @PathVariable UUID lessonId,
             @Valid @RequestBody LessonRequest request) {
         return ResponseEntity.ok(ApiResponse.success(lessonService.updateLesson(userDetails.getId(), courseId, sectionId, lessonId, request)));
+    }
+
+    @PatchMapping("/reorder")
+    public ResponseEntity<ApiResponse<Void>> reorderLessons(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable UUID courseId,
+            @PathVariable UUID sectionId,
+            @Valid @RequestBody LessonReorderRequest request) {
+        lessonService.reorderLessons(userDetails.getId(), courseId, sectionId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @DeleteMapping("/{lessonId}")

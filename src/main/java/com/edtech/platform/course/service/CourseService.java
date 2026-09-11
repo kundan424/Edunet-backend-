@@ -13,6 +13,19 @@ import com.edtech.platform.user.entity.VerificationStatus;
 import com.edtech.platform.user.repository.InstructorProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import com.edtech.platform.course.dto.CourseCurriculumResponse;
+import com.edtech.platform.course.dto.SectionCurriculumResponse;
+import com.edtech.platform.course.dto.SectionResponse;
+import com.edtech.platform.course.dto.LessonResponse;
+import com.edtech.platform.course.entity.Section;
+import com.edtech.platform.course.entity.Lesson;
+import com.edtech.platform.course.repository.SectionRepository;
+import com.edtech.platform.course.repository.LessonRepository;
+import com.edtech.platform.enrollment.repository.EnrollmentRepository;
+import com.edtech.platform.payment.repository.PaymentRepository;
+import java.util.ArrayList;
+import java.util.Map;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -24,12 +37,20 @@ import java.util.stream.Collectors;
 public class CourseService {
     private final CourseRepository courseRepository;
     private final InstructorProfileRepository instructorProfileRepository;
+    private final SectionRepository sectionRepository;
+    private final LessonRepository lessonRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final PaymentRepository paymentRepository;
+
 
     @Transactional
     public CourseResponse createCourse(UUID instructorId, CourseCreateRequest request) {
         Course course = new Course();
         course.setInstructorId(instructorId);
         course.setTitle(request.getTitle());
+        if (course.getPublishStatus() == PublishStatus.PUBLISHED) {
+            course.setPublishStatus(PublishStatus.PENDING_APPROVAL);
+        }
         course.setDescription(request.getDescription());
         course.setCategory(request.getCategory());
         course.setDifficulty(request.getDifficulty());
@@ -56,6 +77,9 @@ public class CourseService {
     public CourseResponse updateCourse(UUID instructorId, UUID courseId, CourseUpdateRequest request) {
         Course course = getCourseAndVerifyOwnership(instructorId, courseId);
         course.setTitle(request.getTitle());
+        if (course.getPublishStatus() == PublishStatus.PUBLISHED) {
+            course.setPublishStatus(PublishStatus.PENDING_APPROVAL);
+        }
         course.setDescription(request.getDescription());
         course.setCategory(request.getCategory());
         course.setDifficulty(request.getDifficulty());
@@ -65,11 +89,18 @@ public class CourseService {
         return mapToResponse(course);
     }
 
+    
     @Transactional
     public void deleteCourse(UUID instructorId, UUID courseId) {
         Course course = getCourseAndVerifyOwnership(instructorId, courseId);
+        
+        if (enrollmentRepository.existsByCourseId(courseId) || paymentRepository.existsByCourseId(courseId)) {
+            throw new EdTechException(ErrorCode.INVALID_COURSE_STATE_TRANSITION, "Cannot delete a course with active enrollments or payments. Please archive it instead.");
+        }
+        
         courseRepository.delete(course);
     }
+
 
     @Transactional
     public void submitForApproval(UUID instructorId, UUID courseId) {
@@ -96,6 +127,86 @@ public class CourseService {
 
         course.setPublishStatus(PublishStatus.PENDING_APPROVAL);
         courseRepository.save(course);
+    }
+
+    
+    @Transactional
+    public void archiveCourse(UUID instructorId, UUID courseId) {
+        Course course = getCourseAndVerifyOwnership(instructorId, courseId);
+        course.setPublishStatus(PublishStatus.ARCHIVED);
+        courseRepository.save(course);
+    }
+
+    @Transactional
+    public void unarchiveCourse(UUID instructorId, UUID courseId) {
+        Course course = getCourseAndVerifyOwnership(instructorId, courseId);
+        if (course.getPublishStatus() != PublishStatus.ARCHIVED) {
+            throw new EdTechException(ErrorCode.INVALID_COURSE_STATE_TRANSITION, "Course is not archived");
+        }
+        course.setPublishStatus(PublishStatus.DRAFT);
+        courseRepository.save(course);
+    }
+
+    @Transactional(readOnly = true)
+    public CourseCurriculumResponse getCourseCurriculum(UUID instructorId, UUID courseId) {
+        Course course = getCourseAndVerifyOwnership(instructorId, courseId);
+        
+        List<Section> sections = sectionRepository.findByCourseIdOrderByDisplayOrderAsc(courseId);
+        
+        List<UUID> sectionIds = sections.stream().map(Section::getId).collect(Collectors.toList());
+        List<Lesson> allLessons = sectionIds.isEmpty() ? new ArrayList<>() : lessonRepository.findBySectionIdInOrderByDisplayOrderAsc(sectionIds);
+        
+        Map<UUID, List<Lesson>> lessonsBySection = allLessons.stream().collect(Collectors.groupingBy(l -> l.getSection().getId()));
+        
+        CourseCurriculumResponse response = new CourseCurriculumResponse();
+        response.setCourse(mapToResponse(course));
+        
+        List<SectionCurriculumResponse> sectionResponses = new ArrayList<>();
+        for (Section section : sections) {
+            SectionCurriculumResponse scr = new SectionCurriculumResponse();
+            scr.setSection(mapSectionToResponse(section));
+            
+            List<Lesson> lessons = lessonsBySection.getOrDefault(section.getId(), new ArrayList<>());
+            scr.setLessons(lessons.stream().map(this::mapLessonToResponse).collect(Collectors.toList()));
+            
+            sectionResponses.add(scr);
+        }
+        response.setSections(sectionResponses);
+        return response;
+    }
+    
+    private SectionResponse mapSectionToResponse(Section section) {
+        SectionResponse response = new SectionResponse();
+        response.setId(section.getId());
+        response.setCourseId(section.getCourse().getId());
+        response.setTitle(section.getTitle());
+        response.setDescription(section.getDescription());
+        response.setDisplayOrder(section.getDisplayOrder());
+        response.setCreatedAt(section.getCreatedAt());
+        response.setUpdatedAt(section.getUpdatedAt());
+        return response;
+    }
+    
+    private LessonResponse mapLessonToResponse(Lesson lesson) {
+        LessonResponse response = new LessonResponse();
+        response.setId(lesson.getId());
+        response.setSectionId(lesson.getSection().getId());
+        response.setTitle(lesson.getTitle());
+        response.setDescription(lesson.getDescription());
+        response.setLessonType(lesson.getLessonType());
+        response.setDisplayOrder(lesson.getDisplayOrder());
+        response.setDurationSeconds(lesson.getDurationSeconds());
+        response.setCreatedAt(lesson.getCreatedAt());
+        response.setUpdatedAt(lesson.getUpdatedAt());
+        return response;
+    }
+
+    // Ensures any structural change to PUBLISHED course downgrades it
+    public void downgradeIfPublished(Course course) {
+        if (course.getPublishStatus() == PublishStatus.PUBLISHED) {
+            course.setPublishStatus(PublishStatus.PENDING_APPROVAL);
+            courseRepository.save(course);
+        }
     }
 
     public Course getCourseAndVerifyOwnership(UUID instructorId, UUID courseId) {

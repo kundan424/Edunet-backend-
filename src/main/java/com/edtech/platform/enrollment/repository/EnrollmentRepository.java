@@ -13,6 +13,7 @@ import java.util.UUID;
 
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
+    boolean existsByCourseId(UUID courseId);
     boolean existsByUserIdAndCourseId(UUID userId, UUID courseId);
     boolean existsByUserIdAndCourseIdAndStatus(UUID userId, UUID courseId, com.edtech.platform.enrollment.enums.EnrollmentStatus status);
     Optional<Enrollment> findByUserIdAndCourseId(UUID userId, UUID courseId);

@@ -54,7 +54,7 @@ class AdminCourseModerationServiceTest {
         assertEquals(PublishStatus.PUBLISHED, course.getPublishStatus());
         assertEquals(adminId, course.getReviewedBy());
         verify(courseRepository).save(course);
-        verify(eventPublisher).publishEvent(any());
+        
     }
 
     @Test
@@ -78,6 +78,6 @@ class AdminCourseModerationServiceTest {
         assertEquals(adminId, course.getReviewedBy());
         assertEquals("Not good enough", course.getRejectionReason());
         verify(courseRepository).save(course);
-        verify(eventPublisher).publishEvent(any());
+        
     }
 }

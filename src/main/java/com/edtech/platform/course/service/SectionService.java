@@ -9,6 +9,11 @@ import com.edtech.platform.common.exception.ErrorCode;
 import com.edtech.platform.course.repository.SectionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import com.edtech.platform.course.dto.SectionReorderRequest;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.function.Function;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -30,6 +35,8 @@ public class SectionService {
         section.setTitle(request.getTitle());
         section.setDescription(request.getDescription());
         section.setDisplayOrder(request.getDisplayOrder());
+        
+        courseService.downgradeIfPublished(course);
         section = sectionRepository.save(section);
         return mapToResponse(section);
     }
@@ -44,20 +51,53 @@ public class SectionService {
 
     @Transactional
     public SectionResponse updateSection(UUID instructorId, UUID courseId, UUID sectionId, SectionRequest request) {
-        courseService.getCourseAndVerifyOwnership(instructorId, courseId);
+        Course course = courseService.getCourseAndVerifyOwnership(instructorId, courseId);
         Section section = getSection(sectionId, courseId);
         section.setTitle(request.getTitle());
         section.setDescription(request.getDescription());
         section.setDisplayOrder(request.getDisplayOrder());
+        
+        courseService.downgradeIfPublished(course);
         section = sectionRepository.save(section);
         return mapToResponse(section);
     }
 
     @Transactional
     public void deleteSection(UUID instructorId, UUID courseId, UUID sectionId) {
-        courseService.getCourseAndVerifyOwnership(instructorId, courseId);
+        Course course = courseService.getCourseAndVerifyOwnership(instructorId, courseId);
         Section section = getSection(sectionId, courseId);
+        
+        courseService.downgradeIfPublished(course);
         sectionRepository.delete(section);
+    }
+
+    
+    @Transactional
+    public void reorderSections(UUID instructorId, UUID courseId, SectionReorderRequest request) {
+        Course course = courseService.getCourseAndVerifyOwnership(instructorId, courseId);
+        List<Section> existingSections = sectionRepository.findByCourseId(courseId);
+        
+        if (existingSections.size() != request.getOrderedSectionIds().size()) {
+            throw new EdTechException(ErrorCode.VALIDATION_FAILED, "Provided section IDs do not match the existing sections count");
+        }
+        
+        Map<UUID, Section> sectionMap = existingSections.stream()
+                .collect(Collectors.toMap(Section::getId, Function.identity()));
+                
+        for (UUID id : request.getOrderedSectionIds()) {
+            if (!sectionMap.containsKey(id)) {
+                throw new EdTechException(ErrorCode.VALIDATION_FAILED, "Invalid section ID provided: " + id);
+            }
+        }
+        
+        int order = 1;
+        for (UUID id : request.getOrderedSectionIds()) {
+            Section section = sectionMap.get(id);
+            section.setDisplayOrder(order++);
+        }
+        
+        sectionRepository.saveAll(existingSections);
+        courseService.downgradeIfPublished(course);
     }
 
     public Section getSection(UUID sectionId, UUID courseId) {

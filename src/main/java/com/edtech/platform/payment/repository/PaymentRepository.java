@@ -10,6 +10,7 @@ import java.util.UUID;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
+    boolean existsByCourseId(UUID courseId);
     Optional<Payment> findByCheckoutSessionId(String checkoutSessionId);
     List<Payment> findByUserId(UUID userId);
 }

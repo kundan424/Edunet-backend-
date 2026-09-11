@@ -4,6 +4,7 @@ import com.edtech.platform.common.exception.ErrorCode;
 import com.edtech.platform.common.exception.ResourceNotFoundException;
 import com.edtech.platform.user.dto.UserResponse;
 import com.edtech.platform.user.entity.User;
+import com.edtech.platform.user.dto.EmailPreferenceDTO;
 import com.edtech.platform.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,5 +30,21 @@ public class UserService {
                 .role(user.getRole())
                 .status(user.getStatus())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public EmailPreferenceDTO getEmailPreferences(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND.getDefaultMessage()));
+        return new EmailPreferenceDTO(user.isEmailNotificationsEnabled());
+    }
+
+    @Transactional
+    public EmailPreferenceDTO updateEmailPreferences(UUID userId, EmailPreferenceDTO dto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND.getDefaultMessage()));
+        user.setEmailNotificationsEnabled(dto.isEmailNotificationsEnabled());
+        userRepository.save(user);
+        return new EmailPreferenceDTO(user.isEmailNotificationsEnabled());
     }
 }

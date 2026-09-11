@@ -16,6 +16,8 @@ import com.edtech.platform.enrollment.entity.Enrollment;
 import com.edtech.platform.enrollment.repository.EnrollmentRepository;
 import com.edtech.platform.user.entity.User;
 import com.edtech.platform.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
+import com.edtech.platform.enrollment.event.CourseEnrollmentEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,7 @@ public class EnrollmentService {
     private final EnrollmentRepository enrollmentRepository;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public EnrollmentResponseDTO enroll(UUID userId, UUID courseId) {
@@ -77,6 +80,8 @@ public class EnrollmentService {
         enrollment = enrollmentRepository.save(enrollment);
 
         courseRepository.incrementStudentCount(course.getId());
+        
+        eventPublisher.publishEvent(new CourseEnrollmentEvent(user.getId(), course.getId(), course.getTitle()));
 
         return mapToDTO(enrollment);
     }

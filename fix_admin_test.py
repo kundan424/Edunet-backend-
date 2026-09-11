@@ -1,8 +1,8 @@
 import os
-path = 'src/test/java/com/edtech/platform/admin/AdminCourseModerationIntegrationTest.java'
-with open(path, 'r', encoding='utf-8') as f:
-    c = f.read()
 
-# We replace the setUp to register users via auth API, or generate token manually
-# Since Admin requires Role.ADMIN, and register might not allow Role.ADMIN easily, wait! RegisterRequest allows role?
-# Let's see if we can register an ADMIN.
+path = 'src/test/java/com/edtech/platform/admin/AdminCourseModerationServiceTest.java'
+with open(path, 'r') as f: c = f.read()
+
+c = c.replace('verify(eventPublisher).publishEvent(any());', 'verify(eventPublisher).publishEvent(org.mockito.ArgumentMatchers.any(Object.class));')
+
+with open(path, 'w') as f: f.write(c)

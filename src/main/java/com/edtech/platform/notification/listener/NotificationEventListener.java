@@ -1,6 +1,8 @@
 package com.edtech.platform.notification.listener;
 
 import com.edtech.platform.assignment.event.AssignmentGradedEvent;
+import com.edtech.platform.email.service.EmailService;
+import com.edtech.platform.enrollment.event.CourseEnrollmentEvent;
 import com.edtech.platform.notification.entity.Notification;
 import com.edtech.platform.notification.enums.NotificationType;
 import com.edtech.platform.notification.repository.NotificationRepository;
@@ -24,6 +26,7 @@ public class NotificationEventListener {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -38,11 +41,13 @@ public class NotificationEventListener {
         notification.setUser(user);
         notification.setType(NotificationType.PAYMENT_SUCCESS);
         notification.setTitle("Payment Successful");
-        notification.setMessage("Your payment for " + event.getCourseTitle() + " was successful. You are now enrolled.");
+        String msg = "Your payment for " + event.getCourseTitle() + " was successful. You are now enrolled.";
+        notification.setMessage(msg);
         notification.setReferenceType("PAYMENT");
         notification.setReferenceId(event.getPaymentId().toString());
 
         notificationRepository.save(notification);
+        sendEmailIfEnabled(user, "Payment Successful", msg);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -58,11 +63,13 @@ public class NotificationEventListener {
         notification.setUser(user);
         notification.setType(NotificationType.ASSIGNMENT_GRADED);
         notification.setTitle("Assignment Graded");
-        notification.setMessage("Your assignment '" + event.getAssignmentTitle() + "' has been graded.");
+        String msg = "Your assignment '" + event.getAssignmentTitle() + "' has been graded.";
+        notification.setMessage(msg);
         notification.setReferenceType("ASSIGNMENT_SUBMISSION");
         notification.setReferenceId(event.getSubmissionId().toString());
 
         notificationRepository.save(notification);
+        sendEmailIfEnabled(user, "Assignment Graded", msg);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -78,11 +85,13 @@ public class NotificationEventListener {
         notification.setUser(user);
         notification.setType(NotificationType.INSTRUCTOR_VERIFIED);
         notification.setTitle("Profile Verified");
-        notification.setMessage("Congratulations! Your instructor profile has been verified. You can now publish courses.");
+        String msg = "Congratulations! Your instructor profile has been verified. You can now publish courses.";
+        notification.setMessage(msg);
         notification.setReferenceType("INSTRUCTOR_PROFILE");
         notification.setReferenceId(event.getProfileId().toString());
 
         notificationRepository.save(notification);
+        sendEmailIfEnabled(user, "Profile Verified", msg);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -98,11 +107,13 @@ public class NotificationEventListener {
         notification.setUser(user);
         notification.setType(NotificationType.QUIZ_COMPLETED);
         notification.setTitle("Quiz Completed");
-        notification.setMessage("You have completed the quiz '" + event.getQuizTitle() + "' with a score of " + String.format("%.1f", event.getScore()) + "%.");
+        String msg = "You have completed the quiz '" + event.getQuizTitle() + "' with a score of " + String.format("%.1f", event.getScore()) + "%.";
+        notification.setMessage(msg);
         notification.setReferenceType("QUIZ_ATTEMPT");
         notification.setReferenceId(event.getAttemptId().toString());
 
         notificationRepository.save(notification);
+        sendEmailIfEnabled(user, "Quiz Completed", msg);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -118,11 +129,13 @@ public class NotificationEventListener {
         notification.setUser(user);
         notification.setType(NotificationType.COURSE_PUBLISHED);
         notification.setTitle("Course Published");
-        notification.setMessage("Congratulations! Your course '" + event.getCourseTitle() + "' has been approved and published.");
+        String msg = "Congratulations! Your course '" + event.getCourseTitle() + "' has been approved and published.";
+        notification.setMessage(msg);
         notification.setReferenceType("COURSE");
         notification.setReferenceId(event.getCourseId().toString());
 
         notificationRepository.save(notification);
+        sendEmailIfEnabled(user, "Course Published", msg);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -133,10 +146,36 @@ public class NotificationEventListener {
         notification.setUser(user);
         notification.setType(NotificationType.COURSE_REJECTED);
         notification.setTitle("Course Rejected");
-        notification.setMessage("Your course '" + event.getCourseTitle() + "' was rejected. Reason: " + event.getReason());
+        String msg = "Your course '" + event.getCourseTitle() + "' was rejected. Reason: " + event.getReason();
+        notification.setMessage(msg);
         notification.setReferenceType("COURSE");
         notification.setReferenceId(event.getCourseId().toString());
 
         notificationRepository.save(notification);
+        sendEmailIfEnabled(user, "Course Rejected", msg);
+    }
+    
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleCourseEnrollmentEvent(CourseEnrollmentEvent event) {
+        // Enrolled events might not have a specific NotificationType yet, let's assume we can just use SYSTEM or create ENROLLMENT_SUCCESS if possible.
+        // Wait, NotificationType is an enum. Let's check what it has.
+        // I will just use PAYMENT_SUCCESS or a generic one if it doesn't exist, wait, the prompt doesn't mandate an in-app notification for enrollment, 
+        // but it does say: "Course enrollment confirmation -> email".
+        // Let's check NotificationType enum first before saving in-app notification, or I can skip the in-app notification for free enrollments.
+        // Actually, let's just send the email!
+        User user = userRepository.getReferenceById(event.getUserId());
+        String msg = "You have successfully enrolled in the course: " + event.getCourseTitle() + ".";
+        sendEmailIfEnabled(user, "Course Enrollment Confirmation", msg);
+    }
+
+    private void sendEmailIfEnabled(User user, String subject, String body) {
+        if (user.isEmailNotificationsEnabled()) {
+            try {
+                emailService.sendEmail(user.getEmail(), subject, body);
+            } catch (Exception e) {
+                log.error("Failed to send email to {}", user.getEmail(), e);
+            }
+        }
     }
 }

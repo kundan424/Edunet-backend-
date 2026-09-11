@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import com.edtech.platform.course.dto.SectionReorderRequest;
+
 import com.edtech.platform.common.response.ApiResponse;
 
 import java.util.List;
@@ -44,6 +47,15 @@ public class SectionController {
             @PathVariable UUID sectionId,
             @Valid @RequestBody SectionRequest request) {
         return ResponseEntity.ok(ApiResponse.success(sectionService.updateSection(userDetails.getId(), courseId, sectionId, request)));
+    }
+
+    @PatchMapping("/reorder")
+    public ResponseEntity<ApiResponse<Void>> reorderSections(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable UUID courseId,
+            @Valid @RequestBody SectionReorderRequest request) {
+        sectionService.reorderSections(userDetails.getId(), courseId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @DeleteMapping("/{sectionId}")
