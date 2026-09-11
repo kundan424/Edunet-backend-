@@ -57,14 +57,18 @@ public class EmailNotificationIntegrationTest {
 
         testUser = new User();
         testUser.setName("Test User");
-        testUser.setEmail("test_f0750e0d@email.com");
+        testUser.setEmail("" + java.util.UUID.randomUUID().toString() + "@email.com");
         testUser.setPasswordHash("hash");
+        testUser.setRole(com.edtech.platform.user.entity.Role.STUDENT);
+        testUser.setStatus(com.edtech.platform.user.entity.UserStatus.ACTIVE);
         testUser.setEmailNotificationsEnabled(true);
         testUser = userRepository.save(testUser);
     }
     
     @AfterEach
     void cleanup() {
+        notificationRepository.deleteAll();
+        userRepository.delete(testUser);
         
         
     }
@@ -78,14 +82,14 @@ public class EmailNotificationIntegrationTest {
 
     @Test
     void coursePublication_triggersEmail() {
-        CoursePublishedEvent event = new CoursePublishedEvent(testUser.getId(), UUID.randomUUID(), "Test Course");
+        CoursePublishedEvent event = new CoursePublishedEvent(UUID.randomUUID(), testUser.getId(), "Test Course");
         transactionTemplate.execute(status -> { eventPublisher.publishEvent(event); return null; });
         verify(emailService, timeout(2000).times(1)).sendEmail(eq(testUser.getEmail()), anyString(), anyString());
     }
 
     @Test
     void successfulPayment_triggersEmail() {
-        PaymentSucceededEvent event = new PaymentSucceededEvent(UUID.randomUUID(), testUser.getId(), UUID.randomUUID(), "Test Course");
+        PaymentSucceededEvent event = new PaymentSucceededEvent(testUser.getId(), UUID.randomUUID(), UUID.randomUUID(), "Test Course");
         transactionTemplate.execute(status -> { eventPublisher.publishEvent(event); return null; });
         verify(emailService, timeout(2000).times(1)).sendEmail(eq(testUser.getEmail()), anyString(), anyString());
     }
@@ -116,7 +120,7 @@ public class EmailNotificationIntegrationTest {
         testUser.setEmailNotificationsEnabled(false);
         userRepository.save(testUser);
 
-        CoursePublishedEvent event = new CoursePublishedEvent(testUser.getId(), UUID.randomUUID(), "Test Course");
+        CoursePublishedEvent event = new CoursePublishedEvent(UUID.randomUUID(), testUser.getId(), "Test Course");
         transactionTemplate.execute(status -> { eventPublisher.publishEvent(event); return null; });
 
         verify(emailService, timeout(2000).times(0)).sendEmail(anyString(), anyString(), anyString());
@@ -129,7 +133,7 @@ public class EmailNotificationIntegrationTest {
     void emailFailure_doesNotRollbackTransaction() {
         doThrow(new RuntimeException("SMTP Server Down")).when(emailService).sendEmail(anyString(), anyString(), anyString());
         
-        CoursePublishedEvent event = new CoursePublishedEvent(testUser.getId(), UUID.randomUUID(), "Test Course");
+        CoursePublishedEvent event = new CoursePublishedEvent(UUID.randomUUID(), testUser.getId(), "Test Course");
         transactionTemplate.execute(status -> { eventPublisher.publishEvent(event); return null; });
         
         List<Notification> notifications = notificationRepository.findAll();
@@ -138,7 +142,7 @@ public class EmailNotificationIntegrationTest {
 
     @Test
     void duplicateEvent_doesNotGenerateDuplicateEmail() {
-        CoursePublishedEvent event = new CoursePublishedEvent(testUser.getId(), UUID.randomUUID(), "Test Course");
+        CoursePublishedEvent event = new CoursePublishedEvent(UUID.randomUUID(), testUser.getId(), "Test Course");
         
         transactionTemplate.execute(status -> { eventPublisher.publishEvent(event); return null; });
         transactionTemplate.execute(status -> { eventPublisher.publishEvent(event); return null; });

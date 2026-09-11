@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/payments/stripe/webhook").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/courses/*/enroll").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/courses/*/learn").authenticated()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/courses/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/courses", "/api/v1/courses/{courseId}", "/api/v1/courses/{courseId}/reviews").permitAll()
                 .requestMatchers("/actuator/health/**").permitAll()
                 .requestMatchers("/api/v1/instructors/**").hasRole("INSTRUCTOR")
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

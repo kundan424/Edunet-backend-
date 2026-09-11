@@ -79,3 +79,5 @@ logs/
 *~
 # Temporary Python scratch scripts
 *.py
+*.mp4
+*.md
