@@ -5,12 +5,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;	
+import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 
 import jakarta.annotation.PostConstruct;
@@ -19,22 +20,22 @@ import java.net.URI;
 import java.util.UUID;
 
 @Service
-@ConditionalOnProperty(name = "edtech.media.storage-type", havingValue = "R2")
-public class R2MediaStorageServiceImpl implements MediaStorageService {
+@ConditionalOnProperty(name = "edtech.media.storage-type", havingValue = "B2")
+public class B2MediaStorageServiceImpl implements MediaStorageService {
 
-    @Value("${edtech.r2.endpoint}")
+    @Value("${edtech.b2.endpoint}")
     private String endpoint;
 
-    @Value("${edtech.r2.bucket}")
+    @Value("${edtech.b2.bucket}")
     private String bucket;
 
-    @Value("${edtech.r2.access-key}")
+    @Value("${edtech.b2.access-key}")
     private String accessKey;
 
-    @Value("${edtech.r2.secret-key}")
+    @Value("${edtech.b2.secret-key}")
     private String secretKey;
 
-    @Value("${edtech.r2.region:auto}")
+    @Value("${edtech.b2.region:auto}")
     private String region;
 
     private S3Client s3Client;
@@ -42,10 +43,17 @@ public class R2MediaStorageServiceImpl implements MediaStorageService {
     @PostConstruct
     public void init() {
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
+        
+        // Enable path-style access for B2 compatibility
+        S3Configuration serviceConfiguration = S3Configuration.builder()
+                .pathStyleAccessEnabled(true)
+                .build();
+
         s3Client = S3Client.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .endpointOverride(URI.create(endpoint))
                 .region(Region.of(region))
+                .serviceConfiguration(serviceConfiguration)
                 .build();
     }
 
@@ -60,7 +68,6 @@ public class R2MediaStorageServiceImpl implements MediaStorageService {
         if (originalFilename != null && originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
-        
         String storageKey = UUID.randomUUID().toString() + extension;
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()

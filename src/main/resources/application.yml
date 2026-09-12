@@ -95,11 +95,11 @@ edtech:
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   media:
     storage-type: ${MEDIA_STORAGE_TYPE:LOCAL}
-  r2:
-    endpoint: ${R2_ENDPOINT:}
-    bucket: ${R2_BUCKET:}
-    access-key: ${R2_ACCESS_KEY:}
-    secret-key: ${R2_SECRET_KEY:}
-    region: ${R2_REGION:auto}
+  b2:
+    endpoint: ${B2_ENDPOINT:}
+    bucket: ${B2_BUCKET:}
+    access-key: ${B2_ACCESS_KEY:}
+    secret-key: ${B2_SECRET_KEY:}
+    region: ${B2_REGION:auto}
   mail:
     from: ${EMAIL_FROM:noreply@edtech.com}
