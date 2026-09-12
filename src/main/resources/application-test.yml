@@ -12,6 +12,8 @@ spring:
     locations: classpath:db/migration
 
 edtech:
+  email:
+    provider: mock
   media:
     storage-type: LOCAL
   stripe:

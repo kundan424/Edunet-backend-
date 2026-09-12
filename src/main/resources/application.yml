@@ -46,17 +46,7 @@ spring:
     baseline-on-migrate: false
     validate-on-migrate: true
     out-of-order: false
-  mail:
-    host: ${EMAIL_HOST:localhost}
-    port: ${EMAIL_PORT:1025}
-    username: ${EMAIL_USERNAME:}
-    password: ${EMAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+
 
 management:
   endpoints:
@@ -101,5 +91,7 @@ edtech:
     access-key: ${B2_ACCESS_KEY:}
     secret-key: ${B2_SECRET_KEY:}
     region: ${B2_REGION:auto}
-  mail:
+  email:
+    provider: ${EMAIL_PROVIDER:mock}
+    resend-api-key: ${RESEND_API_KEY:}
     from: ${EMAIL_FROM:noreply@edtech.com}

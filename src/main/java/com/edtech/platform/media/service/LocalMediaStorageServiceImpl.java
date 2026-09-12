@@ -19,7 +19,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 @Service
-@ConditionalOnProperty(name = "edtech.media.storage-type", havingValue = "LOCAL", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "edtech.media", name = "storage-type", havingValue = "LOCAL", matchIfMissing = true)
 public class LocalMediaStorageServiceImpl implements MediaStorageService {
 
     private final Path rootLocation;

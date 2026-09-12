@@ -20,7 +20,7 @@ import java.net.URI;
 import java.util.UUID;
 
 @Service
-@ConditionalOnProperty(name = "edtech.media.storage-type", havingValue = "B2")
+@ConditionalOnProperty(prefix = "edtech.media", name = "storage-type", havingValue = "B2")
 public class B2MediaStorageServiceImpl implements MediaStorageService {
 
     @Value("${edtech.b2.endpoint}")
