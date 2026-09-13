@@ -150,8 +150,11 @@ public class CourseService {
     @Transactional(readOnly = true)
     public CourseCurriculumResponse getCourseCurriculum(UUID instructorId, UUID courseId) {
         Course course = getCourseAndVerifyOwnership(instructorId, courseId);
-        
-        List<Section> sections = sectionRepository.findByCourseIdOrderByDisplayOrderAsc(courseId);
+        return buildCourseCurriculumResponse(course);
+    }
+
+    public CourseCurriculumResponse buildCourseCurriculumResponse(Course course) {
+        List<Section> sections = sectionRepository.findByCourseIdOrderByDisplayOrderAsc(course.getId());
         
         List<UUID> sectionIds = sections.stream().map(Section::getId).collect(Collectors.toList());
         List<Lesson> allLessons = sectionIds.isEmpty() ? new ArrayList<>() : lessonRepository.findBySectionIdInOrderByDisplayOrderAsc(sectionIds);

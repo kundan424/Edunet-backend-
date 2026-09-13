@@ -137,4 +137,42 @@ class AdminCourseModerationIntegrationTest {
         org.junit.jupiter.api.Assertions.assertEquals("Needs more content", rejected.getRejectionReason());
         org.junit.jupiter.api.Assertions.assertEquals(adminUser.getId(), rejected.getReviewedBy());
     }
+
+    @Test
+    void testGetCourseCurriculumAsAdmin_Success() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/courses/" + pendingCourse.getId() + "/curriculum")
+                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.course.title").value("Pending Course"));
+    }
+
+    @Test
+    void testGetCourseCurriculumAsAdmin_FailsIfNotPending() throws Exception {
+        pendingCourse.setPublishStatus(PublishStatus.DRAFT);
+        courseRepository.save(pendingCourse);
+
+        mockMvc.perform(get("/api/v1/admin/courses/" + pendingCourse.getId() + "/curriculum")
+                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testGetCourseCurriculumAsStudent_Forbidden() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/courses/" + pendingCourse.getId() + "/curriculum")
+                .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testGetCourseCurriculumAsInstructor_Forbidden() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/courses/" + pendingCourse.getId() + "/curriculum")
+                .header("Authorization", "Bearer " + instructorToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testGetCourseCurriculum_Unauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/courses/" + pendingCourse.getId() + "/curriculum"))
+                .andExpect(status().isUnauthorized());
+    }
 }

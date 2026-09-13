@@ -6,7 +6,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties = {"MEDIA_STORAGE_TYPE=B2"})
+@SpringBootTest(properties = {
+    "MEDIA_STORAGE_TYPE=B2",
+    "edtech.b2.endpoint=https://s3.us-west-004.backblazeb2.com",
+    "edtech.b2.bucket=test-bucket",
+    "edtech.b2.access-key=test-access-key",
+    "edtech.b2.secret-key=test-secret-key",
+    "edtech.b2.region=us-west-004"
+})
 public class MediaStorageEnvironmentTest {
 
     @Autowired

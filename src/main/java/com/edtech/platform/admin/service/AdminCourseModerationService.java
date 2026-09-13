@@ -24,6 +24,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.edtech.platform.course.service.CourseService;
+import com.edtech.platform.course.dto.CourseCurriculumResponse;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -32,6 +35,7 @@ public class AdminCourseModerationService {
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final CourseService courseService;
 
     @Transactional(readOnly = true)
     public Page<CourseSummaryResponse> getPendingCourses(Pageable pageable) {
@@ -90,5 +94,17 @@ public class AdminCourseModerationService {
         courseRepository.save(course);
 
         eventPublisher.publishEvent(new CourseRejectedEvent(course.getId(), course.getInstructorId(), course.getTitle(), request.getReason()));
+    }
+
+    @Transactional(readOnly = true)
+    public CourseCurriculumResponse getCourseCurriculumForModeration(UUID courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new EdTechException(ErrorCode.COURSE_NOT_FOUND));
+
+        if (course.getPublishStatus() != PublishStatus.PENDING_APPROVAL) {
+            throw new EdTechException(ErrorCode.VALIDATION_FAILED, "Only PENDING_APPROVAL courses can be viewed for moderation");
+        }
+
+        return courseService.buildCourseCurriculumResponse(course);
     }
 }

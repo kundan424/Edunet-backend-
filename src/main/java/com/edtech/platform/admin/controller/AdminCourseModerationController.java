@@ -5,6 +5,7 @@ import com.edtech.platform.admin.service.AdminCourseModerationService;
 import com.edtech.platform.common.response.ApiResponse;
 import com.edtech.platform.course.dto.CourseSummaryResponse;
 import com.edtech.platform.common.security.UserDetailsImpl;
+import com.edtech.platform.course.dto.CourseCurriculumResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -47,5 +48,11 @@ public class AdminCourseModerationController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         adminCourseModerationService.rejectCourse(courseId, userDetails.getId(), request);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/{courseId}/curriculum")
+    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getCourseCurriculum(
+            @PathVariable UUID courseId) {
+        return ResponseEntity.ok(ApiResponse.success(adminCourseModerationService.getCourseCurriculumForModeration(courseId)));
     }
 }

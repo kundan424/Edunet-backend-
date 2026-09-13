@@ -29,6 +29,9 @@ class AdminCourseModerationServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private com.edtech.platform.course.service.CourseService courseService;
+
     @InjectMocks
     private AdminCourseModerationService moderationService;
 
@@ -79,5 +82,26 @@ class AdminCourseModerationServiceTest {
         assertEquals("Not good enough", course.getRejectionReason());
         verify(courseRepository).save(course);
         
+    }
+
+    @Test
+    void testGetCourseCurriculumForModeration_Success() {
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+        
+        com.edtech.platform.course.dto.CourseCurriculumResponse mockResponse = new com.edtech.platform.course.dto.CourseCurriculumResponse();
+        when(courseService.buildCourseCurriculumResponse(course)).thenReturn(mockResponse);
+
+        com.edtech.platform.course.dto.CourseCurriculumResponse response = moderationService.getCourseCurriculumForModeration(course.getId());
+
+        assertNotNull(response);
+        verify(courseService).buildCourseCurriculumResponse(course);
+    }
+
+    @Test
+    void testGetCourseCurriculumForModeration_FailsIfNotPending() {
+        course.setPublishStatus(PublishStatus.DRAFT);
+        when(courseRepository.findById(course.getId())).thenReturn(Optional.of(course));
+
+        assertThrows(EdTechException.class, () -> moderationService.getCourseCurriculumForModeration(course.getId()));
     }
 }

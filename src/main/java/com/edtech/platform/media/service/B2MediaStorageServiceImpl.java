@@ -42,6 +42,16 @@ public class B2MediaStorageServiceImpl implements MediaStorageService {
 
     @PostConstruct
     public void init() {
+        if (endpoint == null || endpoint.trim().isEmpty()) {
+            throw new IllegalArgumentException("B2 endpoint must be configured when MEDIA_STORAGE_TYPE is B2");
+        }
+        if (bucket == null || bucket.trim().isEmpty()) {
+            throw new IllegalArgumentException("B2 bucket must be configured when MEDIA_STORAGE_TYPE is B2");
+        }
+        if (accessKey == null || accessKey.trim().isEmpty() || secretKey == null || secretKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("B2 credentials must be configured when MEDIA_STORAGE_TYPE is B2");
+        }
+
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
         
         // Enable path-style access for B2 compatibility
