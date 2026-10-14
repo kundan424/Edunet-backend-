@@ -1,264 +1,477 @@
-# EdTech Platform — Full-Stack E-Learning & Course Marketplace Engine
+# Edunet — Full-Featured EdTech & Learning Management Platform (Backend API)
 
-[![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3.4-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Flyway](https://img.shields.io/badge/Flyway-Migrations-CC0202?logo=flyway&logoColor=white)](https://flywaydb.org/)
-[![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF?logo=stripe&logoColor=white)](https://stripe.com/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+Edunet is a multi-role online learning platform backend designed for students, instructors, and platform administrators. It powers the end-to-end lifecycle of digital education—from instructor verification, hierarchical course authoring, and cloud media storage to Stripe-backed enrollments, interactive quizzes, graded assignments, real-time progress tracking, and event-driven notifications.
 
-EdTech Platform is an enterprise-grade learning management system and marketplace that bridges course authoring, video streaming, interactive assessments, and automated monetization. Built for students, verified instructors, and platform administrators, it delivers role-governed course enrollment, resume-capable video progress tracking, and secure Stripe checkouts backed by transactional data integrity.
+![Java](https://img.shields.io/badge/Java-17%2B-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?style=flat-square&logo=springboot&logoColor=white)
+![Spring Security](https://img.shields.io/badge/Spring_Security-JWT-6DB33F?style=flat-square&logo=springsecurity&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![Flyway](https://img.shields.io/badge/Flyway-Migrations-CC0200?style=flat-square&logo=flyway&logoColor=white)
+![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF?style=flat-square&logo=stripe&logoColor=white)
+![Backblaze B2](https://img.shields.io/badge/Backblaze_B2-Cloud_Storage-E21E26?style=flat-square)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=flat-square&logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-2088FF?style=flat-square&logo=githubactions&logoColor=white)
 
-## Links & Live Resources
+## Links & Verification
 
-| Resource | Link / Access | Description |
-| :--- | :--- | :--- |
-| **API Base URL** | `https://edtech-g1wd.onrender.com`  | Live Spring Boot REST API |
-| **API Health & Actuator** | [`/actuator/health`](https://edtech-g1wd.onrender.com/actuator/health) | Live service status & database connectivity check |
----
+* **Live API Base URL:** [api-url](https://edtech-g1wd.onrender.com)
+* **Interactive API Documentation (Swagger UI):** `http://localhost:8080/swagger-ui/index.html`
+* **OpenAPI Specification:** `http://localhost:8080/v3/api-docs`
+* **Frontend Repository:** [Edunet Frontend](https://github.com/kundan424/Edunet.git)
+* **CI/CD Pipeline:** [GitHub Actions Workflow](.github/workflows/ci.yml)
 
-## Visual Overview & Core Workflows
+### API & Workflow Previews
 
-> Screenshots and workflow assets are tracked in [`docs/images/`](docs/images/).
+> **Note:** Store your screenshots inside `docs/images/` in the repository so relative links render directly on GitHub.
 
-### 1. Student Learning Journey (Video Stream & Heartbeat Progress)
-Students experience gated media streaming with automatic progress persistence and real-time completion triggers once 95% of lesson content is consumed:
+| Swagger UI / OpenAPI Endpoints | Course & Payment Flow (Postman) |
+| :---: | :---: |
+| ![Swagger UI](docs/images/swagger-overview.png) | ![Checkout & Webhook Flow](docs/images/stripe-checkout-flow.png) |
+| *Interactive REST API documentation grouped by domain module* | *End-to-end course enrollment via Stripe webhook verification* |
 
+## Problem Statement & Overview
 
-![Student Learning Experience](docs/images/student-classroom.png)
-*Figure 1: Student classroom player displaying lesson streaming, section navigation, and completed progress markers.*
+Building an online learning platform requires more than serving static video links and basic CRUD endpoints. Real-world educational platforms must coordinate multiple user roles with strict trust boundaries: instructors need a structured way to author hierarchical curriculums and upload media without exposing paid content to unauthenticated users; students need reliable payment processing, interactive assessments, and granular progress tracking; and administrators need moderation controls to verify instructors and review courses before they go live.
 
-### 2. Instructor Studio (Curriculum Builder & Assessment Grading)
-Instructors manage course publication pipelines, upload media, create quizzes, and review submitted assignments:
+**Edunet** addresses these challenges by providing a modular, event-driven Spring Boot backend that manages the complete lifecycle of an online course marketplace and learning management system (LMS):
 
-![Instructor Course Builder](docs/images/instructor-studio.png)
-*Figure 2: Instructor management view for structuring modules, lessons, and grading student submissions.*
+* **Controlled Content Supply (Trust & Moderation):** Users cannot arbitrarily publish courses. Instructors must submit a profile for verification (`VerificationStatus`), and courses go through a formal moderation state machine (`PublishStatus`) reviewed by administrators (`AdminCourseModerationService`) before becoming discoverable in the public catalog.
+* **Structured Curriculum & Protected Media Delivery:** Courses are organized hierarchically into ordered **Sections** and **Lessons**. Media assets (`MediaAsset`) are abstracted behind a storage interface supporting both local development storage and **Backblaze B2** cloud object storage, separating public course previews (`PublicLessonResponse`) from enrolled-student learning streams (`CourseLearningResponse`).
+* **Idempotent Monetization & Enrollment:** Paid course enrollments are handled through **Stripe Checkout** and verified asynchronously via `StripeWebhookController`. To prevent duplicate enrollments or double-processing on webhook retries, incoming Stripe events are tracked in a dedicated `StripeEvent` table before publishing a `PaymentSucceededEvent`.
+* **Interactive Assessments & Progress Tracking:** Beyond video and text lessons, the platform supports auto-evaluated quizzes (`QuizTakingService`) and instructor-graded assignments (`AssignmentGradingService`), alongside per-lesson progress tracking (`LessonProgress`) and role-specific analytics dashboards.
+* **Decoupled Notification Engine:** Core domain actions—such as course approval/rejection, instructor verification, enrollment confirmation, and assignment grading—publish Spring domain events consumed by `NotificationEventListener` to dispatch both in-app notifications and transactional emails (via **Resend** or mock local providers) while respecting user email preferences (`EmailPreferenceDTO`).
 
-### 3. Admin Moderation & Verification Flow
-Platform admins review instructor identity credentials and audit unpublished course content before public marketplace listing:
+## Features & Capabilities
 
-![Admin Course Moderation](docs/images/admin-dashboard.png)
-*Figure 3: Admin portal showing instructor verification queues and course moderation controls.*
+### 1. Authentication, Authorization & User Management
+* **Stateless JWT Security:** User registration and login (`AuthController`) backed by Spring Security and custom `JwtAuthenticationFilter` for stateless request authentication.
+* **Role-Based Access Control (RBAC):** Fine-grained access boundaries across `STUDENT`, `INSTRUCTOR`, and `ADMIN` roles (`Role`), alongside account status tracking (`UserStatus`).
+* **Instructor Onboarding & Verification:** Aspiring instructors can create and update professional profiles (`InstructorProfileService`) and submit them for administrative verification (`VerificationStatus`) before publishing courses.
+* **Configurable Email Preferences:** Users can manage granular notification opt-in/opt-out settings (`EmailPreferenceDTO`).
 
-[//]: # (-------------------------------------------------------------------------------------------------------------------------------------------------------------------------)
+### 2. Course Authoring, Discovery & Reviews
+* **Hierarchical Curriculum Builder:** Instructors can author courses (`CourseService`), organize syllabus structure into ordered **Sections** (`SectionService`), and populate them with **Lessons** (`LessonService`) supporting custom drag-and-drop reordering (`SectionReorderRequest`, `LessonReorderRequest`).
+* **Multi-Attribute Catalog Search:** Public course discovery (`CourseDiscoveryController`) powered by dynamic JPA Specifications (`CourseSpecification`) supporting keyword search, difficulty filtering (`CourseDifficulty`), and pagination (`PageResponse`).
+* **Public vs. Enrolled Content Isolation:** Unauthenticated visitors can browse course summaries and syllabus previews (`PublicSectionResponse`, `PublicLessonResponse`), while actual learning media and full lesson details are restricted to enrolled students (`CourseLearningResponse`).
+* **Ratings & Course Reviews:** Enrolled students can submit ratings and written reviews (`CourseReviewController`, `CourseReviewService`) to build social proof across the catalog.
 
-## Problem Statement & Project Overview
+### 3. Payments, Enrollments & Learning Progress
+* **Stripe Checkout Integration:** Students can initiate checkout sessions (`StudentPaymentController`) for paid courses, with transaction states tracked via `PaymentStatus`.
+* **Idempotent Webhook Processing:** Asynchronous payment confirmation via `StripeWebhookController` and `StripeWebhookService`, recording processed event IDs (`StripeEvent`) to prevent duplicate enrollments on webhook retries.
+* **Automated Course Enrollment:** Confirmed payments trigger instant enrollment (`EnrollmentService`), unlocking the student's learning view.
+* **Granular Progress Tracking:** Students can update and track completion states per lesson (`ProgressController`, `LessonProgress`) and view aggregated course completion percentages (`CourseProgressResponse`).
 
-### The Problem
-A modern e-learning marketplace requires solving three major challenges that trivial implementations overlook:
+### 4. Interactive Assessments (Quizzes & Assignments)
+* **Quiz Authoring & Auto-Grading:** Instructors can build multi-question quizzes with multiple-choice options (`QuizAuthoringService`). Students can take timed/tracked quiz attempts (`QuizTakingService`, `StudentQuizController`) with automatic score calculation (`QuizAttempt`, `QuizAttemptAnswer`) while hiding correct-answer flags in student-facing DTOs (`StudentOptionResponse`).
+* **Assignment Submissions & Instructor Grading:** Instructors can attach coursework assignments to lessons (`AssignmentAuthoringService`), and students can submit their work (`AssignmentSubmissionService`). Instructors can review submissions, assign grades, and provide written feedback (`AssignmentGradingService`, `InstructorAssignmentGradingController`).
 
-1. **Unreliable Learning Progress Tracking:** Most simple LMS implementations mark course content as completed on superficial client clicks. This leads to inaccurate completion metrics, prevents students from resuming video playback across devices, and undermines certificate credibility.
-2. **Payment Inconsistency & Concurrent Enrollment Conflicts:** Handling asynchronous payment flows (such as credit cards and localized payment methods via Stripe) introduces distributed state risks. Without strict idempotency, duplicate webhook delivery or concurrent user checkouts can lead to duplicate charges, duplicate enrollment rows, or unfulfilled orders.
-3. **Operational Overengineering vs. Content Governance:** Many modern architectures prematurely decompose learning platforms into dozens of distributed microservices (separate auth, catalog, video, and payment services), introducing heavy network latency, deployment complexity, and eventual consistency failures. Conversely, open platforms without administrative verification often suffer from unvetted instructors and low-quality spam courses.
+### 5. Cloud Media Management
+* **Pluggable Storage Architecture:** Unified `MediaStorageService` interface with environment-driven switching between local filesystem storage (`LocalMediaStorageServiceImpl`) for development and **Backblaze B2** cloud storage (`B2MediaStorageServiceImpl`) for production.
+* **Role-Scoped Media Access:** Separate upload/management endpoints for instructors (`InstructorMediaController`) and protected media retrieval endpoints for enrolled students (`StudentMediaController`), backed by `MediaAsset` metadata and `ProcessingStatus` tracking.
 
----
+### 6. Event-Driven Notifications & Role Dashboards
+* **Asynchronous In-App & Email Notifications:** Domain events (`CoursePublishedEvent`, `CourseRejectedEvent`, `InstructorVerifiedEvent`, `CourseEnrollmentEvent`, `AssignmentGradedEvent`, `QuizCompletedEvent`, `PaymentSucceededEvent`) are handled by `NotificationEventListener` to persist in-app alerts (`NotificationController`) and dispatch emails via **Resend** (`ResendEmailServiceImpl`) or a local mock provider (`MockEmailService`).
+* **Role-Specific Analytics Dashboards:** Dedicated aggregation endpoints (`DashboardController`) serving tailored metrics for:
+  * **Students:** Enrolled courses, "Continue Learning" resume points (`ContinueLearningDTO`), and recent learning activity (`StudentDashboardResponse`).
+  * **Instructors:** Course-level analytics (`InstructorCourseAnalyticsResponse`), enrollment totals, and recent student reviews (`InstructorDashboardResponse`).
+  * **Admins:** Platform-wide user, course moderation, and operational metrics (`AdminDashboardResponse`).
 
-### The Solution: EdTech Platform
-EdTech Platform addresses these challenges through a unified, high-integrity **Modular Monolith** that orchestrates the entire course lifecycle:
-
-* **Authoritative Progress Engine:** Tracks student playback via periodic heartbeat pings and enforces server-side completion validation (requiring students to consume $\ge 95\%$ of lesson media duration before issuing completion status) while persisting exact resume coordinates.
-* **Resilient Transaction & Webhook Processing:** Integrates Stripe Checkout with server-side webhook verification, idempotent payment handling, and database-level unique constraints (`UNIQUE(user_id, course_id)`) to eliminate checkout race conditions.
-* **Two-Sided Trust & Moderation Pipeline:** Separates students, instructors, and admins with role-based access control. Instructors undergo identity and credential vetting by platform admins, and draft courses must pass administrative moderation checks before appearing in public catalog searches.
-* **Cost-Effective, Resilient Architecture:** Consolidates authentication, catalog discovery, media asset management, quizzes, submissions, and payments into decoupled Spring modules running in a single deployable artifact—yielding immediate database consistency, sub-millisecond inter-module communication, and minimal operational overhead.
-
-## Features and Capabilities
-
-The platform implements complete end-to-end workflows tailored to three distinct personas: **Students**, **Instructors**, and **Platform Administrators**.
-
----
-
-### 1. Student Experience & Learning Engine
-* **Course Discovery & Trigram Search:**
-    * Fuzzy search across course titles, descriptions, and categories powered by PostgreSQL `pg_trgm` indexes.
-    * Multi-attribute filtering by category, difficulty level (Beginner, Intermediate, Advanced), price (Free vs. Paid), and rating.
-    * Public syllabus preview displaying section modules and lesson outlines without exposing gated content.
-* **Enrollment & Payments:**
-    * Instant enrollment in free courses.
-    * Hosted Stripe Checkout sessions for paid courses with automated receipt generation.
-    * Duplicate enrollment prevention guaranteed at the database level.
-* **Interactive Classroom & Media Player:**
-    * Multimedia lesson viewer supporting video streams and rich text articles.
-    * **Resume Playback:** Automatically persists `last_played_seconds` to allow seamless continuation across sessions and devices.
-    * **Authoritative Progress Heartbeats:** Background heartbeat pings validate engagement and automatically mark a lesson completed once $\ge 95\%$ of media duration is viewed.
-    * Course completion percentage dynamically computed across all mandatory sections.
-* **Quizzes & Assignments:**
-    * Multi-choice quizzes with automated instant scoring, passing grade validation, and detailed answer explanations.
-    * Assignment submissions with text solutions and file attachments.
-    * View instructor grades, rubric scores, and personalized feedback.
-* **Course Reviews & Social Proof:**
-    * Verified student reviews with 1–5 star ratings and written testimonials (restricted strictly to enrolled students).
-
----
-
-### 2. Instructor Studio & Course Management
-* **Curriculum Builder:**
-    * Create, update, and organize hierarchical course structures (Courses $\rightarrow$ Sections $\rightarrow$ Lessons).
-    * Support for multiple lesson types: Video, Article/Reading, Quiz, and Assignment.
-    * Drag-and-drop ordering and section reindexing.
-* **Media Management:**
-    * Secure media uploading for video lessons and course thumbnails.
-    * Dual storage engine: local filesystem storage for development, Backblaze B2 (S3-compatible API) for production.
-    * Automatic MIME-type validation and file size restrictions (up to 500MB).
-* **Assessment Creation & Grading:**
-    * Quiz editor with customizable answer choices, single/multiple correct answers, and passing thresholds.
-    * Assignment creation with submission deadlines and grading rubrics.
-    * Grading portal to review submitted student work, assign numerical grades, and provide feedback notes.
-* **Instructor Verification & Analytics:**
-    * Instructor profile onboarding with submission of credentials and bios for administrative vetting.
-    * Performance dashboard displaying total enrolled students, course ratings, and revenue metrics.
-
----
-
-### 3. Platform Administration & Governance
-* **Course Moderation Pipeline:**
-    * Review submitted courses before they appear in public search.
-    * Course lifecycle controls: Approve, Reject (with feedback notes), or Archive.
-* **Instructor Verification Queue:**
-    * Dedicated queue to audit instructor credentials and approve/reject instructor privileges.
-* **User & Role Management:**
-    * Administrative oversight to inspect user accounts, toggle active status, and audit access permissions.
-* **Platform Health & Metrics:**
-    * Spring Boot Actuator endpoints (`/actuator/health`, `/actuator/info`) for container and database health monitoring.
-
----
-
-### 4. Cross-Cutting Platform Capabilities
-* **Role-Based Access Control (RBAC):** Strict stateless JWT authentication securing routes according to user role (`STUDENT`, `INSTRUCTOR`, `ADMIN`).
-* **Decoupled Event Notifications:** Asynchronous domain events (e.g., `CoursePublishedEvent`, `EnrollmentCompletedEvent`, `AssignmentGradedEvent`) dispatch in-app notifications and email alerts without blocking HTTP request threads.
-* **Configurable Email Provider:** Pluggable email dispatch supporting Resend in production and a mock provider for local development, backed by user notification preferences.
+### 7. Platform Administration & Content Moderation
+* **Course Moderation Workflow:** Administrators can review pending courses, approve them for publication, or reject them with structured feedback (`AdminCourseModerationController`, `CourseRejectionRequest`).
+* **Instructor Verification & User Governance:** Admins can approve or reject instructor verification requests (`AdminVerificationController`) and manage platform users (`AdminUserController`).
 
 ## Technology Stack
 
-The platform is designed around a modern, reliable, and production-tested open-source stack. Every tool has a defined architectural role:
-
-### 1. Core Backend & Application Framework
-| Technology | Version | Architectural Role |
+| Layer / Responsibility | Technology | Role in the Application |
 | :--- | :--- | :--- |
-| **Java** | 21 (LTS) | Strongly typed runtime utilizing records for immutable DTOs, modern pattern matching, and LTS performance stability. |
-| **Spring Boot** | 3.3.4 | Core enterprise application framework managing dependency injection, embedded Tomcat servlet container, and graceful application shutdown. |
-| **Spring Data JPA / Hibernate** | 6.x | Object-relational mapping, declarative transaction management (`@Transactional`), and pagination support. |
-| **Spring Security** | 6.x | Stateless HTTP filter chain, BCrypt password hashing, and granular Role-Based Access Control (RBAC) across endpoints. |
-| **Spring Boot Actuator** | 3.3.4 | Operational observability, health probing (`/actuator/health`), and readiness checks for container orchestrators. |
+| **Core Backend Framework** | **Java 17+ & Spring Boot 3.x** | Provides dependency injection, REST API routing, validation, profile-based configuration (`dev`, `test`, `prod`), and Spring application events. |
+| **Security & Auth** | **Spring Security & JWT** | Enforces stateless authentication (`JwtAuthenticationFilter`, `JwtUtils`), password hashing, CORS policies (`CorsConfig`), and role-based endpoint protection. |
+| **Database & Persistence** | **PostgreSQL & Spring Data JPA** | Stores relational domain data across 16 schema versions; utilizes JPA entities, custom JPQL queries, and `JpaSpecificationExecutor` (`CourseSpecification`) for dynamic filtering. |
+| **Schema Migrations** | **Flyway** | Version-controls database evolution across 16 incremental SQL migration scripts (`V1__baseline_schema.sql` through `V16__add_email_preferences.sql`). |
+| **Payment Processing** | **Stripe SDK & Webhooks** | Manages checkout session creation and cryptographically verified webhook event handling for course purchases. |
+| **Cloud Object Storage** | **Backblaze B2 / Local FS** | Stores uploaded course media assets behind the `MediaStorageService` strategy interface. |
+| **Transactional Email** | **Resend API / Mock Service** | Dispatches event-driven transactional emails via `ResendEmailServiceImpl` in production and `MockEmailService` in local/test environments. |
+| **Observability & Tracing** | **RequestIdFilter (MDC/Logging)** | Injects and propagates a unique correlation/request ID per HTTP request for structured debugging and error responses (`ErrorResponse`). |
+| **Containerization & Proxy** | **Docker, Docker Compose & Nginx** | Packages the Spring Boot application (`Dockerfile`), orchestrates multi-container local and production stacks (`docker-compose.yml`, `docker-compose.prod.yml`), and configures reverse-proxy routing (`nginx.conf`). |
+| **Testing & CI** | **JUnit 5, MockMvc & GitHub Actions** | Runs unit and slice/integration tests across controllers, services, and repositories (`src/test/`), automated on every push via `.github/workflows/ci.yml`. |
+
+## Architecture & Data Flow
+
+Edunet is structured as a **Domain-Driven Modular Monolith** built on Spring Boot. Rather than grouping all classes into global technical layers (`controllers/`, `services/`, `repositories/`), the codebase is partitioned into 12 cohesive domain packages (`auth`, `user`, `course`, `enrollment`, `progress`, `quiz`, `assignment`, `payment`, `media`, `notification`, `dashboard`, and `admin`) alongside a shared `common` infrastructure module. Cross-domain side effects—such as triggering enrollments after payment or sending emails after course moderation—are decoupled using **Spring Application Events**.
+
+### 1. High-Level System Architecture
+
+#### Option A: GitHub Mermaid Diagram (Renders automatically on GitHub & imports into Excalidraw)
+ [architecture diagram](docs/images/architecture.png)
+### 2. Core Request & Data Flows
+
+#### Flow 1: Idempotent Course Purchase & Automated Enrollment
+When a student purchases a paid course, Edunet avoids trusting client-side redirects and instead relies on cryptographically signed Stripe webhooks with database-level idempotency:
+
+[flow diagram](docs/images/flowdiagram.png)
+
+**Step-by-step data flow:**
+1. `StudentPaymentController` receives the checkout request and delegates to `PaymentService`, which creates a `PENDING` `Payment` entity and returns a Stripe Checkout URL (`CheckoutResponseDTO`).
+2. Upon payment completion, Stripe sends an asynchronous webhook to `StripeWebhookController`.
+3. `StripeWebhookService` verifies the webhook signature and queries `StripeEventRepository` to check if the Stripe event ID has already been processed.
+4. If the event is new, it persists the `StripeEvent`, marks the `Payment` as `SUCCEEDED`, and publishes a `PaymentSucceededEvent`.
+5. The enrollment flow activates the student's `Enrollment` and emits a `CourseEnrollmentEvent`, which `NotificationEventListener` consumes to create an in-app notification (`Notification`) and send a confirmation email via `EmailService` (if enabled in the user's `EmailPreferenceDTO`).
 
 ---
 
-### 2. Database & Schema Management
-| Technology | Version | Architectural Role |
-| :--- | :--- | :--- |
-| **PostgreSQL** | 16 | Primary ACID-compliant relational data store. Employs `pg_trgm` extension for fuzzy catalog text searching and relational constraints to prevent race conditions. |
-| **Flyway** | 10.x | Code-first database migrations (`V1` to `V16`) ensuring deterministic schema versioning and zero drift across development, CI, and production. |
-| **HikariCP** | 5.x | High-throughput JDBC connection pooling with fine-tuned connection timeouts (20s) and lifecycle management. |
+#### Flow 2: Course Authoring, Admin Moderation & Public Discovery
+1. **Instructor Verification:** A user submits an `InstructorProfileRequest` via `InstructorController`. An administrator reviews and approves the profile via `AdminVerificationController`, transitioning `VerificationStatus` to `VERIFIED` and emitting an `InstructorVerifiedEvent`.
+2. **Drafting Curriculum:** The verified instructor creates a course (`CourseController`), adds ordered sections (`SectionController`), uploads media assets (`InstructorMediaController` $\rightarrow$ `B2MediaStorageServiceImpl` / `LocalMediaStorageServiceImpl`), and attaches quizzes (`InstructorQuizController`) or assignments (`InstructorAssignmentController`).
+3. **Moderation Gate:** When submitted for review, an administrator evaluates the course via `AdminCourseModerationController`:
+   * **Approval:** `AdminCourseModerationService` transitions the course's `PublishStatus` to `PUBLISHED` and emits a `CoursePublishedEvent`.
+   * **Rejection:** Transitions status to `REJECTED` with a required reason (`CourseRejectionRequest`) and emits a `CourseRejectedEvent`.
+4. **Notification & Catalog Indexing:** `NotificationEventListener` notifies the instructor of the outcome. Published courses immediately become queryable through `CourseDiscoveryController` via `CourseSpecification` filters.
 
 ---
 
-### 3. Security, Payments & Cloud Integrations
-| Technology | Version | Architectural Role |
-| :--- | :--- | :--- |
-| **JJWT (Java JWT)** | 0.12.6 | Cryptographic creation, signing (HMAC-SHA256), and claims extraction for stateless Bearer authentication tokens. |
-| **Stripe Java SDK** | 24.2.0 | Hosted Checkout session creation, payment intent verification, and cryptographically signed webhook consumption. |
-| **AWS Java SDK (S3)** | 2.25.11 | Media storage abstraction targeting Backblaze B2 (S3-compatible) for production media persistence, with local filesystem fallback for offline dev. |
-| **Resend & Mock Email** | API | Decoupled notification dispatch for transactional alerts (purchase receipts, account verification, grade alerts). |
+### 3. Component Design & Responsibilities
+
+* **Controllers (`*/controller/*`):** Handle HTTP routing, request parameter binding, `@Valid` payload validation, and role enforcement. Controllers never touch JPA entities directly; they accept request DTOs and return standardized `ApiResponse<T>` or `PageResponse<T>` wrappers.
+* **Services (`*/service/*`):** Enforce domain invariants (e.g., verifying that an instructor owns a course before modifying sections, checking enrollment status before granting access to lesson media, or auto-grading a `QuizAttempt`).
+* **Repositories (`*/repository/*`):** Spring Data JPA interfaces encapsulating persistence operations, custom JPQL aggregations (such as `AdminDashboardRepository`, `InstructorDashboardRepository`, and `StudentDashboardRepository`), and dynamic query specifications (`CourseSpecification`).
+* **DTOs (`*/dto/*`):** Strict separation between internal persistence models and external API contracts. Notably, assessment and course modules maintain role-segregated DTOs—such as `InstructorOptionResponse` (includes `isCorrect`) vs. `StudentOptionResponse` (omits answer keys), and `PublicLessonResponse` vs. `CourseLearningResponse`.
+* **Events & Listeners (`*/event/*`, `notification/listener/*`):** Lightweight immutable event records that decouple core database transactions from notification and email delivery side effects.
 
 ---
 
-### 4. Containerization, DevOps & Testing
-| Technology | Tool / Framework | Architectural Role |
+### 4. Engineering Decisions & Trade-Offs
+
+* **Modular Monolith over Microservices:**
+  * *Decision:* Packaged the 12 domains inside a single deployable Spring Boot artifact with strict package boundaries rather than splitting them into separate microservices.
+  * *Trade-off:* Avoids distributed transaction complexity (2PC/Sagas) between payments, enrollments, and course progress while maintaining strong ACID guarantees in PostgreSQL. Domain events (`ApplicationEventPublisher`) keep modules loosely coupled so individual modules (like `notification` or `media`) could be extracted in the future if independent scaling is needed.
+* **Strategy Pattern for External Providers (Media & Email):**
+  * *Decision:* Abstracted file storage behind `MediaStorageService` (`B2MediaStorageServiceImpl` vs. `LocalMediaStorageServiceImpl`) and email delivery behind `EmailService` (`ResendEmailServiceImpl` vs. `MockEmailService`).
+  * *Trade-off:* Allows local development and automated CI integration tests to run with zero external cloud credentials or network flakiness, while production uses Backblaze B2 and Resend seamlessly via configuration properties.
+* **Webhook Idempotency via Dedicated `StripeEvent` Table:**
+  * *Decision:* Stored every processed Stripe webhook event ID in PostgreSQL (`V12__create_payments.sql`) rather than relying solely on in-memory caches.
+  * *Trade-off:* Adds a lightweight database lookup per webhook call, but guarantees durable idempotency across container restarts and prevents duplicate enrollments when Stripe retries webhook delivery.
+* **Role-Segregated DTO Projections:**
+  * *Decision:* Created separate DTO hierarchies for public visitors, students, instructors, and admins instead of reusing a single DTO with `@JsonIgnore` flags.
+  * *Trade-off:* Increases the number of DTO classes to maintain, but eliminates accidental data leakage (such as exposing quiz answer keys or unpurchased lesson media URLs).
+ 
+## Project Structure
+
+```text
+edunet-backend/
+├── .github/workflows/
+│   └── ci.yml                          # GitHub Actions CI pipeline for automated builds & tests
+├── src/
+│   ├── main/
+│   │   ├── java/com/edtech/platform/
+│   │   │   ├── EdTechApplication.java  # Spring Boot entry point
+│   │   │   ├── admin/                  # Course moderation, instructor verification & user governance
+│   │   │   ├── assignment/             # Assignment authoring, student submissions & instructor grading
+│   │   │   ├── auth/                   # Registration, login & token issuance
+│   │   │   ├── common/                 # Shared infrastructure
+│   │   │   │   ├── exception/          # GlobalExceptionHandler, ErrorCode & custom domain exceptions
+│   │   │   │   ├── response/           # Standardized ApiResponse, ErrorResponse & PageResponse wrappers
+│   │   │   │   ├── security/           # SecurityConfig, JwtAuthenticationFilter, JwtUtils & CORS
+│   │   │   │   └── util/               # RequestIdFilter (MDC correlation IDs) & Constants
+│   │   │   ├── course/                 # Courses, Sections, Lessons, Reviews & dynamic JPA Specifications
+│   │   │   ├── dashboard/              # Aggregated analytics for Student, Instructor & Admin dashboards
+│   │   │   ├── email/                  # EmailService interface, Resend API integration & Mock provider
+│   │   │   ├── enrollment/             # Student course enrollments & protected learning views
+│   │   │   ├── media/                  # MediaAsset management with Backblaze B2 & Local storage strategies
+│   │   │   ├── notification/           # NotificationEventListener, in-app alerts & email dispatch
+│   │   │   ├── payment/                # Stripe Checkout integration & idempotent StripeWebhookService
+│   │   │   ├── progress/               # Per-lesson completion tracking & course progress aggregation
+│   │   │   ├── quiz/                   # Quiz authoring, timed/tracked student attempts & auto-grading
+│   │   │   └── user/                   # User management, InstructorProfile & email preferences
+│   │   └── resources/
+│   │       ├── db/migration/           # 16 Flyway SQL migrations (V1__baseline to V16__email_preferences)
+│   │       ├── application.yml         # Base configuration
+│   │       ├── application-dev.yml     # Local development profile
+│   │       └── application-test.yml    # Isolated test profile
+│   └── test/                           # Unit & integration test suites mirroring domain packages
+├── Dockerfile                          # Multi-stage container build definition
+├── docker-compose.yml                  # Local development stack (App + PostgreSQL)
+├── docker-compose.prod.yml             # Production container orchestration
+├── nginx.conf                          # Nginx reverse proxy configuration
+├── .env.example                        # Template for required environment variables
+└── pom.xml                             # Maven dependencies and build configuration
+```
+## Getting Started
+
+### Prerequisites
+Ensure you have the following installed on your machine before running the project:
+* **Java Development Kit (JDK):** Java 17 or higher
+* **Maven:** 3.8+ (or use the included Maven Wrapper `./mvnw` / `mvnw.cmd`)
+* **Database:** PostgreSQL 15+ (or **Docker & Docker Compose** to spin up the database/application containers automatically)
+* **Optional External Accounts (for production/cloud providers):**
+  * **Stripe Account & Stripe CLI:** For checkout sessions and local webhook forwarding
+  * **Backblaze B2 Bucket:** If switching media storage from `local` to cloud object storage
+  * **Resend API Key:** If switching email delivery from `mock` to live transactional emails
+
+---
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/kundan424/edunet-backend-.git](https://github.com/kundan424/edunet-backend-.git)
+   cd edunet-backend-
+   ```
+
+2. **Create your environment configuration file:**
+   Copy the provided `.env.example` template to `.env` in the root directory:
+   ```bash
+   cp .env.example .env
+   ```
+
+---
+
+### Configuration & Environment Variables
+
+The application uses environment variables defined in `.env` (or injected via Docker Compose / OS environment) mapped into `application.yml` and `application-dev.yml`. 
+
+Below are the key configuration variables (use safe placeholders locally; never commit real secrets):
+
+| Variable Category | Variable Name | Description / Default Behaviour |
 | :--- | :--- | :--- |
-| **Docker & Docker Compose** | Engine 24+ | Multi-service local environment setup and reproducible production deployment orchestration. |
-| **Nginx** | 1.25+ | Production reverse proxy managing Let's Encrypt TLS/HTTPS termination, static caching, and internal port forwarding to app port 8080. |
-| **GitHub Actions** | CI Workflow | Automated build pipeline enforcing strict Maven compilation, linter passes, and automated test execution against ephemeral database containers. |
-| **JUnit 5 & Mockito** | Test Framework | Service layer unit testing, mock-based isolation, and domain logic validation. |
-| **Testcontainers** | 1.20.1 | Ephemeral PostgreSQL Docker container orchestration during integration tests to guarantee real-database parity. |
+| **Spring Profile** | `SPRING_PROFILES_ACTIVE` | Active profile (`dev`, `test`, or `prod`). Defaults to `dev` for local development. |
+| **Database (PostgreSQL)** | `DB_URL` / `SPRING_DATASOURCE_URL` | JDBC connection URL (e.g., `jdbc:postgresql://localhost:5432/edtech_db`). |
+| | `DB_USERNAME` / `DB_PASSWORD` | PostgreSQL database credentials. |
+| **Security (JWT)** | `JWT_SECRET` | Base64-encoded secret key used by `JwtUtils` to sign and verify access tokens. |
+| | `JWT_EXPIRATION_MS` | Token validity duration in milliseconds. |
+| **Payments (Stripe)** | `STRIPE_API_KEY` | Stripe secret key (`sk_test_...`) used by `PaymentService`. |
+| | `STRIPE_WEBHOOK_SECRET` | Webhook signing secret (`whsec_...`) used by `StripeWebhookService` to verify events. |
+| **Media Storage** | `MEDIA_STORAGE_PROVIDER` | Storage strategy selector (`local` for `LocalMediaStorageServiceImpl` or `b2` for `B2MediaStorageServiceImpl`). |
+| | `B2_KEY_ID` / `B2_APPLICATION_KEY` | Backblaze B2 credentials (required only when using `b2` storage). |
+| | `B2_BUCKET_NAME` / `B2_ENDPOINT` | Target Backblaze B2 bucket name and S3-compatible endpoint. |
+| **Email Service** | `EMAIL_PROVIDER` | Email strategy selector (`mock` for `MockEmailService` console logging or `resend` for `ResendEmailServiceImpl`). |
+| | `RESEND_API_KEY` | Resend API key (required only when live email delivery is enabled). |
 
-## 6. Architecture and Data Flow
+> **Database Migrations Note:** You do **not** need to run SQL scripts manually. When the application starts, **Flyway** automatically executes all pending migrations (`V1__baseline_schema.sql` through `V16__add_email_preferences.sql`) against the configured PostgreSQL database.
 
-### Architecture Overview
+---
 
-EduNest follows a **modular monolith architecture** built with Spring Boot. The backend runs as a single application while organizing business functionality into separate modules such as authentication, course management, enrollment, learning progress, assessments, payments, media, notifications, and administration.
+### Running the Application
 
-The application uses a layered architecture to separate HTTP request handling, business logic, persistence, and external integrations. Controllers handle incoming REST requests, services enforce business rules and transactional operations, and Spring Data JPA repositories manage database access. PostgreSQL stores persistent application data, while Flyway manages version-controlled database migrations.
+#### Option 1: Run Everything with Docker Compose (Recommended)
+Start both the PostgreSQL database and the Spring Boot backend using the local compose file:
 
-Cross-cutting components handle JWT authentication, role-based access control (RBAC), request correlation IDs, CORS configuration, and consistent exception handling. Spring application events connect modules when one business operation needs to trigger another module's behavior without directly coupling their repositories.
+```bash
+docker compose up --build
+```
+* The PostgreSQL instance will initialize first, and the backend will automatically apply Flyway migrations (`V1`–`V16`) on startup.
+* The API will be available at `http://localhost:8080`.
 
-### Architecture Diagram
+#### Option 2: Local Development (PostgreSQL in Docker + Maven Wrapper)
+If you want fast live-reloading while coding in your IDE:
 
-```mermaid
-flowchart TD
-    User([User: Student / Instructor / Admin]) --> UI[Frontend Client Application<br/>React / Vite / Mobile]
+1. **Start only the PostgreSQL container:**
+   ```bash
+   docker compose up -d postgres
+   ```
+   *(Or ensure a local PostgreSQL server is running and matches your `.env` credentials).*
 
-    UI -->|HTTPS / Bearer JWT| Filters[Pre-Processing & Security Filters<br/>RequestIdFilter & JwtAuthenticationFilter]
+2. **Compile and start the Spring Boot server using the Maven Wrapper:**
+   * **Linux / macOS:**
+     ```bash
+     ./mvnw clean spring-boot:run
+     ```
+   * **Windows (Command Prompt / PowerShell):**
+     ```powershell
+     .\mvnw.cmd clean spring-boot:run
+     ```
 
-    subgraph SpringBoot["Spring Boot 3.3.4 Modular Monolith"]
-        Filters --> Controllers[REST Controllers Layer<br/>Validation, DTOs & ApiResponse]
+3. **Verify the server is running:**
+   Open Swagger UI at `http://localhost:8080/swagger-ui/index.html` or test the health/discovery endpoint:
+   ```bash
+   curl http://localhost:8080/api/v1/courses
+   ```
 
-        subgraph DomainModules["Domain Modules & Core Services"]
-            AuthMod["Auth & User Module<br/>(BCrypt, RBAC, Profiles)"]
-            CourseMod["Course & Catalog Module<br/>(Curriculum, Reviews, Search)"]
-            EnrollMod["Enrollment Module<br/>(Access Control, Ownership)"]
-            ProgMod["Progress Engine<br/>(Heartbeats, 95% Threshold)"]
-            AssessMod["Quiz & Assignment Module<br/>(Auto-Grading, Submissions)"]
-            PayMod["Payment Module<br/>(Stripe Sessions, Idempotency)"]
-            MediaMod["Media Storage Service<br/>(MIME Validation, S3 Client)"]
-            AdminMod["Admin Moderation Module<br/>(Course Review, Verification)"]
-        end
+#### Option 3: Testing Stripe Webhooks Locally (Optional)
+To test the end-to-end payment and enrollment flow locally (`StripeWebhookController`), forward Stripe events using the Stripe CLI:
+```bash
+stripe listen --forward-to localhost:8080/api/v1/webhooks/stripe
+```
+## API Documentation & Usage Examples
 
-        Controllers --> DomainModules
+All REST endpoints return a standardized JSON envelope (`ApiResponse<T>` for single resources, `PageResponse<T>` for paginated collections, and `ErrorResponse` via `GlobalExceptionHandler` when a domain or validation error occurs). Every response is tagged with a unique correlation ID generated by `RequestIdFilter`.
 
-        DomainModules -->|Publish Domain Events| EventBus[Spring ApplicationEventPublisher]
-        EventBus -->|@TransactionalEventListener<br/>AFTER_COMMIT| NotifModule[Notification & Email Service]
-    end
+> **Interactive Reference:** When the application is running locally, explore the complete API specification via Swagger UI at `http://localhost:8080/swagger-ui/index.html`.
 
-    DomainModules -->|Spring Data JPA / HikariCP| DB[(PostgreSQL 16 Database<br/>Flyway, pg_trgm, ACID Constraints)]
+### Core API Modules Overview
 
-    PayMod <-->|API Sessions & Webhooks| Stripe[Stripe Payment Gateway]
-    MediaMod -->|AWS S3 SDK| Storage[(Backblaze B2 / Local Filesystem)]
-    NotifModule -->|HTTP REST| Resend[Resend Transactional Email API]
+| Domain Module | Controller Class(es) | Primary Capabilities | Access Level |
+| :--- | :--- | :--- | :--- |
+| **Authentication** | `AuthController` | User registration (`RegisterRequest`) and JWT login (`LoginRequest` $\rightarrow$ `LoginResponse`). | Public |
+| **Users & Profiles** | `UserController`, `InstructorController` | Current user profile (`UserResponse`), email preferences (`EmailPreferenceDTO`), and instructor onboarding (`InstructorProfileRequest`). | Authenticated / Instructor |
+| **Catalog Discovery** | `CourseDiscoveryController` | Dynamic course search & filtering (`CourseSearchRequest`), public syllabus previews (`PublicSectionResponse`, `PublicLessonResponse`). | Public |
+| **Course Authoring** | `CourseController`, `SectionController`, `LessonController` | Course creation/updates, submitting courses for moderation, and section/lesson CRUD with drag-and-drop reordering (`SectionReorderRequest`, `LessonReorderRequest`). | `INSTRUCTOR` |
+| **Reviews & Ratings** | `CourseReviewController` | Submitting and retrieving student course ratings and written reviews (`CourseReviewRequest`, `CourseReviewResponse`). | Public (Read) / Enrolled `STUDENT` (Write) |
+| **Payments & Webhooks** | `StudentPaymentController`, `StripeWebhookController` | Initiating Stripe Checkout sessions (`CheckoutResponseDTO`) and processing signed Stripe webhooks (`Stripe-Signature`). | `STUDENT` / Stripe Server |
+| **Enrollments & Learning** | `EnrollmentController`, `ProgressController` | Fetching enrolled courses, full learning curriculum (`CourseLearningResponse`), and updating per-lesson completion (`ProgressUpdateRequest`). | `STUDENT` |
+| **Quizzes** | `InstructorQuizController`, `StudentQuizController` | Authoring quizzes/questions/options (`QuizCreateRequest`) and submitting student quiz attempts for auto-grading (`QuizSubmitRequest` $\rightarrow$ `QuizAttemptResponse`). | `INSTRUCTOR` / `STUDENT` |
+| **Assignments** | `InstructorAssignmentController`, `StudentAssignmentController`, `InstructorAssignmentGradingController` | Creating assignments, submitting student coursework (`AssignmentSubmissionRequest`), and grading submissions with feedback (`GradeSubmissionRequest`). | `INSTRUCTOR` / `STUDENT` |
+| **Media Assets** | `InstructorMediaController`, `StudentMediaController` | Uploading lesson media to Backblaze B2 / Local storage and serving protected media streams (`MediaAssetDto`). | `INSTRUCTOR` / Enrolled `STUDENT` |
+| **Notifications** | `NotificationController` | Listing in-app notifications (`NotificationResponse`) and marking alerts as read. | Authenticated |
+| **Dashboards** | `DashboardController` | Role-specific analytics: `StudentDashboardResponse`, `InstructorDashboardResponse`, `InstructorCourseAnalyticsResponse`, and `AdminDashboardResponse`. | `STUDENT` / `INSTRUCTOR` / `ADMIN` |
+| **Administration** | `AdminCourseModerationController`, `AdminVerificationController`, `AdminUserController` | Approving/rejecting courses (`CourseRejectionRequest`), verifying instructors, and governing user accounts (`UserSummaryResponse`). | `ADMIN` |
+
+---
+
+### Representative Request & Response Examples
+
+#### 1. Authenticate & Obtain JWT (`POST /api/v1/auth/login`)
+**Request:**
+```http
+POST /api/v1/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "email": "student@edunet.com",
+  "password": "StrongPassword123!"
+}
 ```
 
-### Component Responsibilities
+**Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "tokenType": "Bearer",
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "student@edunet.com",
+      "role": "STUDENT",
+      "status": "ACTIVE"
+    }
+  }
+}
+```
 
-**Authentication and security** are handled through Spring Security and JWT-based authentication. The security filter validates bearer tokens and establishes the authenticated user's security context. Role-based authorization restricts operations according to user permissions, such as student, instructor, and administrator access.
+#### 2. Submit a Quiz Attempt (`POST /api/v1/student/quizzes/{quizId}/submit`)
+**Request:**
+```http
+POST /api/v1/student/quizzes/8f9d2a10-4c3b-41e0-9f1a-123456789abc/submit HTTP/1.1
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
 
-**The controller layer** exposes REST APIs, validates incoming request data, invokes the appropriate service methods, and returns structured responses through DTOs. Keeping business rules out of controllers makes the API layer easier to maintain and test.
+{
+  "answers": [
+    {
+      "questionId": "111e8400-e29b-41d4-a716-446655440001",
+      "selectedOptionId": "222e8400-e29b-41d4-a716-446655440002"
+    }
+  ]
+}
+```
 
-**The service layer** contains the platform's business logic. It coordinates operations such as course publication, enrollment, payment processing, progress tracking, and assessment grading. Transaction boundaries are defined at the service layer where related database operations must succeed or fail together.
+**Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Quiz submitted and graded",
+  "data": {
+    "attemptId": "999e8400-e29b-41d4-a716-446655440999",
+    "quizId": "8f9d2a10-4c3b-41e0-9f1a-123456789abc",
+    "score": 100.0,
+    "status": "COMPLETED",
+    "submittedAt": "2026-10-14T18:00:00Z"
+  }
+}
+```
 
-**The persistence layer** uses Spring Data JPA and Hibernate to access PostgreSQL. Flyway applies versioned migrations to manage database schema changes. Database constraints, including the unique constraint on student-course enrollments, provide an additional layer of data integrity.
+#### 3. Standardized Error Format (`ErrorResponse`)
+When a business rule fails (e.g., an unverified instructor attempts to publish a course, or a student tries to enroll twice), `GlobalExceptionHandler` returns a structured payload mapped to `ErrorCode`:
+```json
+{
+  "success": false,
+  "errorCode": "CONFLICT",
+  "message": "Student is already enrolled in this course",
+  "timestamp": "2026-10-14T18:05:12Z",
+  "requestId": "req-7c9e6679-7425-40de-944b-e07fc1f90ae7"
+}
+```
+## Database Design & Key Entities
 
-**Event-driven components** use Spring's application event mechanism to decouple business operations from notifications and email delivery. Transaction-bound listeners configured for `AFTER_COMMIT` execute only after the publishing transaction commits successfully. This prevents notifications from being triggered by transactions that roll back.
+The PostgreSQL schema is version-controlled across **16 incremental Flyway migrations** (`V1__baseline_schema.sql` through `V16__add_email_preferences.sql`), evolving cleanly across identity, curriculum, assessments, commerce, media, and notifications.
 
-**External integrations** are isolated behind dedicated components. The payment module communicates with Stripe for checkout and payment confirmation, while the media module abstracts file storage between local development storage and Backblaze B2. Notification delivery uses Resend or a mock provider, depending on the environment.
+### 1. Entity-Relationship Diagram (ERD)
 
-### Data Flow
+#### Option A: GitHub Mermaid ERD (Renders on GitHub)
+[ER DIAGRAM](docs/images/er-diagram.png)
+### 2. Core Domain Tables & Migration Breakdown
 
-#### 1. User Registration and Authentication
+| Domain Area | Entities / Tables | Flyway Migration(s) | Key Constraints & Design Highlights |
+| :--- | :--- | :--- | :--- |
+| **Identity & Trust** | `User`, `InstructorProfile` | `V2`, `V3`, `V16` | Enforces unique email constraints, tracks `Role` (`STUDENT`, `INSTRUCTOR`, `ADMIN`), `UserStatus`, `VerificationStatus`, and per-user email notification flags (`V16`). |
+| **Curriculum & Moderation** | `Course`, `Section`, `Lesson`, `CourseReview` | `V4`, `V5`, `V6`, `V7`, `V14`, `V15` | Hierarchical `Course` $\rightarrow$ `Section` $\rightarrow$ `Lesson` relationships with explicit ordering columns; indexed for catalog search (`V7`) and extended with admin moderation audit fields (`V15`). |
+| **Enrollment & Progress** | `Enrollment`, `LessonProgress` | `V8`, `V9` | Prevents duplicate enrollments via composite uniqueness on `(user_id, course_id)`; tracks granular `ProgressStatus` per student per lesson. |
+| **Assessments** | `Quiz`, `QuizQuestion`, `QuestionOption`, `QuizAttempt`, `QuizAttemptAnswer`, `Assignment`, `AssignmentSubmission` | `V10`, `V11` | Separates quiz definition (`QuizQuestion`, `QuestionOption`) from student execution (`QuizAttempt`, `QuizAttemptAnswer`) and tracks instructor grading workflows (`SubmissionStatus`). |
+| **Commerce & Idempotency** | `Payment`, `StripeEvent` | `V12` | Links checkout sessions to `PaymentStatus` and stores processed Stripe webhook IDs in `StripeEvent` to guarantee idempotent webhook handling. |
+| **Media & Notifications** | `MediaAsset`, `Notification` | `V13`, `V14` | Tracks storage keys and `ProcessingStatus` for uploaded files (`V13`) and persists event-driven in-app `Notification` records (`NotificationType`) alongside search indexes (`V14`). |
 
-When a user registers, the frontend sends a request to the authentication API. The authentication service checks whether the email is already registered and securely hashes the password using BCrypt before persisting the user in PostgreSQL. When an instructor registers, the platform also creates an instructor profile with a pending verification status.
+## Testing & Quality Checks
 
-During login, Spring Security authenticates the supplied credentials, and the application issues a signed JWT containing the relevant identity and authorization claims. For subsequent protected requests, the client sends the token in the `Authorization` header. The JWT filter validates the token and establishes the security context before the request reaches the controller. The controller delegates the operation to the service layer, which applies business rules and accesses the database through repositories.
+The repository includes an automated test suite (`src/test/java/com/edtech/platform/`) covering unit, service, repository, and end-to-end integration workflows under an isolated test profile (`application-test.yml`). Every push and pull request is verified automatically via **GitHub Actions** (`.github/workflows/ci.yml`).
 
-#### 2. Course Creation, Review, and Publication
+### What is Tested
 
-An instructor first completes the required verification process and creates a course in the `DRAFT` state. The instructor then builds the curriculum by adding sections and lessons and uploading any required media through the media storage service.
+| Domain / Layer | Test Class(es) | Verification Scope |
+| :--- | :--- | :--- |
+| **Authentication & Users** | `AuthControllerTest`, `InstructorVerificationTest`, `EmailPreferencesIntegrationTest` | Registration/login endpoints, instructor verification state transitions, and user email preference persistence. |
+| **Course Management & Discovery** | `CourseManagementTest`, `CourseDiscoveryTest`, `CourseReviewServiceTest` | Course/Section/Lesson CRUD, dynamic specification filtering, and student course review validation. |
+| **Admin Moderation** | `AdminCourseModerationServiceTest`, `AdminCourseModerationIntegrationTest` | Course approval/rejection workflows, rejection reason enforcement, and moderation event publishing. |
+| **Payments & Webhooks** | `PaymentServiceTest`, `StripeWebhookServiceTest`, `StripeWebhookIntegrationTest` | Checkout session creation, webhook signature handling, and database-backed `StripeEvent` idempotency. |
+| **Enrollments & Progress** | `EnrollmentTest`, `ProgressServiceTest`, `ProgressIntegrationTest` | Post-payment enrollment activation, duplicate enrollment prevention, and lesson/course completion percentage calculation. |
+| **Media Storage** | `MediaServiceTest`, `MediaAssetRepositoryTest`, `MediaStorageConfigurationTest`, `MediaStorageEnvironmentTest`, `MediaStorageOsEnvTest` | Storage provider selection (`local` vs. `b2`), environment property binding, and `MediaAsset` persistence. |
+| **Notifications & Dashboards** | `NotificationServiceTest`, `EmailNotificationIntegrationTest`, `DashboardIntegrationTest` | Event-driven in-app notification creation, mock/Resend email dispatch, and role-based dashboard aggregations. |
 
-When the course is submitted for review, its status changes to `PENDING_REVIEW`. An administrator reviews the course and either approves or rejects it. Approval transitions the course to `PUBLISHED`, making it available through the course discovery APIs.
+### Running the Tests
 
-After a successful publication transaction, the application emits a course-related event. An after-commit listener handles the corresponding notification and email workflow. This separates course state changes from notification delivery while keeping the publishing operation within the course module.
+Run the full unit and integration test suite using the Maven Wrapper:
 
-#### 3. Stripe Payment and Student Enrollment
+* **Linux / macOS:**
+  ```bash
+  ./mvnw clean test
+  ```
+* **Windows (PowerShell / CMD):**
+  ```powershell
+  .\mvnw.cmd clean test
+  ```
+* **Run a specific test class:**
+  ```bash
+  ./mvnw test -Dtest=StripeWebhookIntegrationTest
+  ```
 
-When a student purchases a course, the payment service first checks whether the student already has an active enrollment. It then creates a Stripe Checkout Session, associates the relevant user and course identifiers with the payment workflow, and stores the pending payment information.
+  ## Deployment
 
-After the student completes checkout, Stripe sends a webhook to the backend. The webhook handler verifies the signature using the configured webhook secret before accepting the event. The payment workflow uses Stripe event identifiers to recognize previously processed deliveries and avoid duplicate processing.
+The project includes production containerization support via a multi-stage `Dockerfile`, `docker-compose.prod.yml`, and `nginx.conf`:
 
-For a successful payment, the application updates the payment status and creates the student's enrollment. The database-level unique constraint on `(user_id, course_id)` helps prevent duplicate enrollment records, including when concurrent requests attempt to enroll the same student in the same course. Once the successful transaction commits, the application can publish a payment-success event for downstream notification handling.
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+* **Containerized Runtime:** Builds an optimized Spring Boot JAR image and runs it alongside PostgreSQL.
+* **Reverse Proxy:** `nginx.conf` routes incoming HTTP traffic to the internal Spring Boot container while forwarding client IP and protocol headers.
+* **External Cloud Providers in Production:** Set `MEDIA_STORAGE_PROVIDER=b2` and `EMAIL_PROVIDER=resend` in the production environment to switch from local/mock implementations to Backblaze B2 object storage and Resend transactional emails.
 
-### Key Design Decisions
+---
 
-**Modular monolith instead of microservices:** Related business modules run within a single application, allowing them to share the same deployment and use local method calls while retaining clear functional boundaries. This avoids the additional deployment, networking, and distributed-transaction complexity of splitting the platform into independent services prematurely.
+## Known Limitations & Future Improvements
 
-**Transactional business operations:** Service-layer transactions and PostgreSQL constraints help preserve data consistency during related state changes. For example, enrollment uniqueness is enforced by the database rather than relying solely on application-level checks.
+To keep the current scope focused and maintainable, the following limitations exist in the present implementation alongside planned next steps:
 
-**Event-driven notifications:** Domain events separate core business operations from secondary actions such as notification creation and email delivery. After-commit listeners prevent transaction-dependent notifications from running before the corresponding database changes have committed.
-
-**Database-managed schema evolution:** Flyway provides ordered, version-controlled migrations so that database changes can be tracked and applied consistently across development and deployment environments.
+* **Synchronous Media Upload Processing:**
+  * *Current Limitation:* Media uploads (`InstructorMediaController`) are handled within the application lifecycle and stored directly as objects without multi-bitrate video transcoding (HLS/DASH).
+  * *Future Improvement:* Offload video transcoding to an asynchronous worker queue and generate signed, time-limited CDN streaming URLs.
+* **In-Process Domain Events:**
+  * *Current Limitation:* Domain events (`PaymentSucceededEvent`, `CoursePublishedEvent`, etc.) use Spring's in-memory `ApplicationEventPublisher`. If the process crashes mid-listener execution after a commit, non-transactional side effects (like external emails) do not automatically retry.
+  * *Future Improvement:* Implement the **Transactional Outbox Pattern** or integrate a persistent message broker (RabbitMQ / Kafka) for guaranteed at-least-once notification delivery.
+* **Database-Backed Catalog Search:**
+  * *Current Limitation:* Course discovery (`CourseSpecification`) relies on PostgreSQL queries and indexes (`V7`, `V14`), which is sufficient for moderate catalog sizes but lacks typo-tolerant full-text ranking.
+  * *Future Improvement:* Integrate PostgreSQL `tsvector` full-text search or an external search engine (Meilisearch / Elasticsearch) for fuzzy matching and faceted ranking.
+* **Caching Layer:**
+  * *Current Limitation:* Public catalog discovery and dashboard aggregations query PostgreSQL directly on each request.
+  * *Future Improvement:* Introduce **Redis** caching for high-read public course details, curriculum trees, and instructor dashboard metrics with cache eviction on course updates.
+ 
+---
