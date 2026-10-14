@@ -1,6 +1,6 @@
 # EdTech Platform Backend
 
-Spring Boot 3.x and Java 21 modular monolith for an e-learning platform.
+Spring Boot 3.x and Java 21 modular monolith for an E-learning platform.
 
 ## overview
 This is the backend API driving course descovery, enrollment, video media progress, quizzes, assignments, and Stripe payments. It employs JWT-based security with RBAC (Students, Instructors, Admins).
