@@ -102,13 +102,13 @@ Edunet is structured as a **Domain-Driven Modular Monolith** built on Spring Boo
 ### 1. High-Level System Architecture
 
 #### Option A: GitHub Mermaid Diagram (Renders automatically on GitHub & imports into Excalidraw)
- [architecture diagram](docs/images/architecture.png)
+![architecture diagram](docs/images/architecture.svg)
 ### 2. Core Request & Data Flows
 
 #### Flow 1: Idempotent Course Purchase & Automated Enrollment
 When a student purchases a paid course, Edunet avoids trusting client-side redirects and instead relies on cryptographically signed Stripe webhooks with database-level idempotency:
 
-[flow diagram](docs/images/flowdiagram.png)
+[flow diagram](docs/images/flowdiagram.svg)
 
 **Step-by-step data flow:**
 1. `StudentPaymentController` receives the checkout request and delegates to `PaymentService`, which creates a `PENDING` `Payment` entity and returns a Stripe Checkout URL (`CheckoutResponseDTO`).
@@ -123,8 +123,8 @@ When a student purchases a paid course, Edunet avoids trusting client-side redir
 1. **Instructor Verification:** A user submits an `InstructorProfileRequest` via `InstructorController`. An administrator reviews and approves the profile via `AdminVerificationController`, transitioning `VerificationStatus` to `VERIFIED` and emitting an `InstructorVerifiedEvent`.
 2. **Drafting Curriculum:** The verified instructor creates a course (`CourseController`), adds ordered sections (`SectionController`), uploads media assets (`InstructorMediaController` $\rightarrow$ `B2MediaStorageServiceImpl` / `LocalMediaStorageServiceImpl`), and attaches quizzes (`InstructorQuizController`) or assignments (`InstructorAssignmentController`).
 3. **Moderation Gate:** When submitted for review, an administrator evaluates the course via `AdminCourseModerationController`:
-   * **Approval:** `AdminCourseModerationService` transitions the course's `PublishStatus` to `PUBLISHED` and emits a `CoursePublishedEvent`.
-   * **Rejection:** Transitions status to `REJECTED` with a required reason (`CourseRejectionRequest`) and emits a `CourseRejectedEvent`.
+  * **Approval:** `AdminCourseModerationService` transitions the course's `PublishStatus` to `PUBLISHED` and emits a `CoursePublishedEvent`.
+  * **Rejection:** Transitions status to `REJECTED` with a required reason (`CourseRejectionRequest`) and emits a `CourseRejectedEvent`.
 4. **Notification & Catalog Indexing:** `NotificationEventListener` notifies the instructor of the outcome. Published courses immediately become queryable through `CourseDiscoveryController` via `CourseSpecification` filters.
 
 ---
@@ -153,7 +153,7 @@ When a student purchases a paid course, Edunet avoids trusting client-side redir
 * **Role-Segregated DTO Projections:**
   * *Decision:* Created separate DTO hierarchies for public visitors, students, instructors, and admins instead of reusing a single DTO with `@JsonIgnore` flags.
   * *Trade-off:* Increases the number of DTO classes to maintain, but eliminates accidental data leakage (such as exposing quiz answer keys or unpurchased lesson media URLs).
- 
+
 ## Project Structure
 
 ```text
@@ -227,7 +227,7 @@ Ensure you have the following installed on your machine before running the proje
 
 ### Configuration & Environment Variables
 
-The application uses environment variables defined in `.env` (or injected via Docker Compose / OS environment) mapped into `application.yml` and `application-dev.yml`. 
+The application uses environment variables defined in `.env` (or injected via Docker Compose / OS environment) mapped into `application.yml` and `application-dev.yml`.
 
 Below are the key configuration variables (use safe placeholders locally; never commit real secrets):
 
@@ -271,14 +271,14 @@ If you want fast live-reloading while coding in your IDE:
    *(Or ensure a local PostgreSQL server is running and matches your `.env` credentials).*
 
 2. **Compile and start the Spring Boot server using the Maven Wrapper:**
-   * **Linux / macOS:**
-     ```bash
-     ./mvnw clean spring-boot:run
-     ```
-   * **Windows (Command Prompt / PowerShell):**
-     ```powershell
-     .\mvnw.cmd clean spring-boot:run
-     ```
+  * **Linux / macOS:**
+    ```bash
+    ./mvnw clean spring-boot:run
+    ```
+  * **Windows (Command Prompt / PowerShell):**
+    ```powershell
+    .\mvnw.cmd clean spring-boot:run
+    ```
 
 3. **Verify the server is running:**
    Open Swagger UI at `http://localhost:8080/swagger-ui/index.html` or test the health/discovery endpoint:
@@ -399,7 +399,7 @@ The PostgreSQL schema is version-controlled across **16 incremental Flyway migra
 ### 1. Entity-Relationship Diagram (ERD)
 
 #### Option A: GitHub Mermaid ERD (Renders on GitHub)
-[ER DIAGRAM](docs/images/er-diagram.png)
+![ER DIAGRAM](docs/images/schema.svg)
 ### 2. Core Domain Tables & Migration Breakdown
 
 | Domain Area | Entities / Tables | Flyway Migration(s) | Key Constraints & Design Highlights |
@@ -473,5 +473,5 @@ To keep the current scope focused and maintainable, the following limitations ex
 * **Caching Layer:**
   * *Current Limitation:* Public catalog discovery and dashboard aggregations query PostgreSQL directly on each request.
   * *Future Improvement:* Introduce **Redis** caching for high-read public course details, curriculum trees, and instructor dashboard metrics with cache eviction on course updates.
- 
+
 ---
