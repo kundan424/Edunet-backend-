@@ -34,6 +34,16 @@ public class ProgressController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
+    @PostMapping("/{courseId}/lessons/{lessonId}/complete")
+    public ResponseEntity<ApiResponse<Void>> completeLesson(
+            @PathVariable UUID courseId,
+            @PathVariable UUID lessonId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        
+        progressService.completeLesson(userDetails.getId(), courseId, lessonId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
     @GetMapping("/{courseId}/progress")
     public ResponseEntity<ApiResponse<CourseProgressResponse>> getCourseProgress(
             @PathVariable UUID courseId,

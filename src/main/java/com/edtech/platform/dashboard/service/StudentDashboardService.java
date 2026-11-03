@@ -20,7 +20,7 @@ public class StudentDashboardService {
         long completedCourses = repository.countEnrollmentsByStatus(studentId, "COMPLETED");
         long totalEnrolled = repository.countEnrollmentsByStatus(studentId, null);
         
-        double courseCompletionPct = activeCourses > 0 ? (completedCourses * 100.0) / activeCourses : 0.0;
+        double courseCompletionPct = totalEnrolled > 0 ? (completedCourses * 100.0) / totalEnrolled : 0.0;
         
         long totalLessonsInActive = repository.countTotalLessonsInActiveCourses(studentId);
         long completedLessons = repository.countCompletedLessons(studentId);

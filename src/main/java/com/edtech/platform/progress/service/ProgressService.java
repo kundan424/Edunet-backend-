@@ -6,6 +6,7 @@ import com.edtech.platform.course.entity.Lesson;
 import com.edtech.platform.course.enums.LessonType;
 import com.edtech.platform.course.repository.CourseRepository;
 import com.edtech.platform.course.repository.LessonRepository;
+import com.edtech.platform.enrollment.enums.EnrollmentStatus;
 import com.edtech.platform.enrollment.repository.EnrollmentRepository;
 import com.edtech.platform.progress.dto.CourseProgressResponse;
 import com.edtech.platform.progress.dto.LessonProgressResponse;
@@ -84,15 +85,19 @@ public class ProgressService {
         if (progress.getStatus() != ProgressStatus.COMPLETED) {
             boolean isCompleted = false;
             
-            if (lesson.getLessonType() == LessonType.VIDEO) {
+            if (Boolean.TRUE.equals(request.getCompleted()) || submittedPosition >= 99999) {
+                isCompleted = true;
+            } else if (lesson.getLessonType() == LessonType.VIDEO) {
                 if (lesson.getDurationSeconds() != null && lesson.getDurationSeconds() > 0) {
                     double watchedRatio = (double) progress.getMaxPositionSeconds() / lesson.getDurationSeconds();
                     if (watchedRatio >= videoCompletionThreshold) {
                         isCompleted = true;
                     }
+                } else if (progress.getMaxPositionSeconds() > 0) {
+                    isCompleted = true;
                 }
             } else if (lesson.getLessonType() == LessonType.QUIZ) {
-                // Quizzes are explicitly marked complete upon attempt submission
+                // Quizzes are explicitly marked complete upon attempt submission or explicit request
                 isCompleted = false;
             } else {
                 // Non-video lessons (TEXT, etc.) are completed simply by recording a progress update
@@ -108,6 +113,10 @@ public class ProgressService {
         }
 
         lessonProgressRepository.save(progress);
+
+        if (progress.getStatus() == ProgressStatus.COMPLETED) {
+            checkAndUpdateCourseCompletion(userId, courseId);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -181,6 +190,20 @@ public class ProgressService {
             progress.setStatus(ProgressStatus.COMPLETED);
             progress.setCompletedAt(LocalDateTime.now());
             lessonProgressRepository.save(progress);
+            checkAndUpdateCourseCompletion(userId, courseId);
+        }
+    }
+
+    private void checkAndUpdateCourseCompletion(UUID userId, UUID courseId) {
+        int totalLessons = lessonRepository.countBySectionCourseId(courseId);
+        int completedCount = lessonProgressRepository.countByUserIdAndCourseIdAndStatus(userId, courseId, ProgressStatus.COMPLETED);
+        if (totalLessons > 0 && completedCount >= totalLessons) {
+            enrollmentRepository.findByUserIdAndCourseId(userId, courseId).ifPresent(enr -> {
+                if (enr.getStatus() != EnrollmentStatus.COMPLETED) {
+                    enr.setStatus(EnrollmentStatus.COMPLETED);
+                    enrollmentRepository.save(enr);
+                }
+            });
         }
     }
 }

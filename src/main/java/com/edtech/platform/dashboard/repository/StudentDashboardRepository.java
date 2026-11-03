@@ -33,7 +33,7 @@ public class StudentDashboardRepository {
         String sql = "SELECT COUNT(l.id) FROM lessons l " +
                      "JOIN sections s ON l.section_id = s.id " +
                      "JOIN enrollments e ON s.course_id = e.course_id " +
-                     "WHERE e.user_id = ? AND e.status = 'ACTIVE'";
+                     "WHERE e.user_id = ? AND (e.status = 'ACTIVE' OR e.status = 'COMPLETED')";
         return jdbcTemplate.queryForObject(sql, Long.class, studentId);
     }
 
@@ -75,17 +75,27 @@ public class StudentDashboardRepository {
     }
 
     public List<ContinueLearningDTO> getContinueLearning(UUID studentId, int limit) {
-        String sql = "SELECT c.id as course_id, c.title as course_title, l.id as lesson_id, l.title as lesson_title, lp.last_position_seconds, lp.updated_at, " +
+        String sql = "SELECT c.id as course_id, c.title as course_title, l.id as lesson_id, l.title as lesson_title, " +
+                     "COALESCE(lp.last_position_seconds, 0) as last_position_seconds, " +
+                     "COALESCE(lp.updated_at, e.created_at) as updated_at, " +
                      "(SELECT COUNT(lp2.id) FROM lesson_progress lp2 WHERE lp2.course_id = c.id AND lp2.user_id = ? AND lp2.status = 'COMPLETED') as completed_lessons, " +
                      "(SELECT COUNT(l2.id) FROM lessons l2 JOIN sections s2 ON l2.section_id = s2.id WHERE s2.course_id = c.id) as total_lessons " +
-                     "FROM lesson_progress lp " +
-                     "JOIN courses c ON lp.course_id = c.id " +
-                     "JOIN lessons l ON lp.lesson_id = l.id " +
-                     "JOIN enrollments e ON c.id = e.course_id " +
-                     "WHERE lp.user_id = ? AND e.user_id = ? AND e.status = 'ACTIVE' " +
-                     "AND lp.id IN (SELECT id FROM (SELECT id, ROW_NUMBER() OVER(PARTITION BY course_id ORDER BY updated_at DESC) as rn FROM lesson_progress WHERE user_id = ?) tmp WHERE rn = 1) " +
-                     "ORDER BY lp.updated_at DESC LIMIT ?";
-        return jdbcTemplate.query(sql, this::mapContinueLearning, studentId, studentId, studentId, studentId, limit);
+                     "FROM enrollments e " +
+                     "JOIN courses c ON e.course_id = c.id " +
+                     "LEFT JOIN ( " +
+                     "    SELECT id, course_id, lesson_id, last_position_seconds, updated_at " +
+                     "    FROM ( " +
+                     "        SELECT id, course_id, lesson_id, last_position_seconds, updated_at, " +
+                     "               ROW_NUMBER() OVER(PARTITION BY course_id ORDER BY updated_at DESC) as rn " +
+                     "        FROM lesson_progress " +
+                     "        WHERE user_id = ? " +
+                     "    ) ranked " +
+                     "    WHERE rn = 1 " +
+                     ") lp ON lp.course_id = c.id " +
+                     "LEFT JOIN lessons l ON lp.lesson_id = l.id " +
+                     "WHERE e.user_id = ? AND (e.status = 'ACTIVE' OR e.status = 'COMPLETED') " +
+                     "ORDER BY updated_at DESC LIMIT ?";
+        return jdbcTemplate.query(sql, this::mapContinueLearning, studentId, studentId, studentId, limit);
     }
 
     private ContinueLearningDTO mapContinueLearning(ResultSet rs, int rowNum) throws SQLException {
@@ -93,11 +103,14 @@ public class StudentDashboardRepository {
         long total = rs.getLong("total_lessons");
         double pct = total > 0 ? (completed * 100.0) / total : 0.0;
         
+        String lessonIdStr = rs.getString("lesson_id");
+        UUID lessonId = (lessonIdStr != null && !lessonIdStr.isEmpty()) ? UUID.fromString(lessonIdStr) : null;
+
         return ContinueLearningDTO.builder()
                 .courseId(UUID.fromString(rs.getString("course_id")))
                 .courseTitle(rs.getString("course_title"))
                 .progressPercentage(pct)
-                .lastLessonId(UUID.fromString(rs.getString("lesson_id")))
+                .lastLessonId(lessonId)
                 .lastLessonTitle(rs.getString("lesson_title"))
                 .lastPositionSeconds(rs.getObject("last_position_seconds") != null ? rs.getInt("last_position_seconds") : 0)
                 .updatedAt(rs.getTimestamp("updated_at") != null ? rs.getTimestamp("updated_at").toLocalDateTime() : null)
