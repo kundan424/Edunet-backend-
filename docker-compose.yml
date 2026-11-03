@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: edtech_user
       POSTGRES_PASSWORD: edtech_pass
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - edtech-postgres-data:/var/lib/postgresql/data
     healthcheck:

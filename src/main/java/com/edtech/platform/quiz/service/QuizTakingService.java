@@ -52,10 +52,11 @@ public class QuizTakingService {
         validateEnrollment(userId, courseId);
         
         Quiz quiz = quizRepository.findById(quizId)
+                .or(() -> quizRepository.findByLessonId(quizId))
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
                 
         // Check if there is an active attempt
-        List<QuizAttempt> attempts = quizAttemptRepository.findByQuizIdAndUserIdOrderByAttemptNumberAsc(quizId, userId);
+        List<QuizAttempt> attempts = quizAttemptRepository.findByQuizIdAndUserIdOrderByAttemptNumberAsc(quiz.getId(), userId);
         
         for (QuizAttempt attempt : attempts) {
             if (attempt.getStatus() == AttemptStatus.IN_PROGRESS) {
@@ -86,7 +87,11 @@ public class QuizTakingService {
     public QuizAttemptResponse getActiveAttempt(UUID userId, UUID courseId, UUID quizId) {
         validateEnrollment(userId, courseId);
         
-        List<QuizAttempt> attempts = quizAttemptRepository.findByQuizIdAndUserIdOrderByAttemptNumberAsc(quizId, userId);
+        Quiz quiz = quizRepository.findById(quizId)
+                .or(() -> quizRepository.findByLessonId(quizId))
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
+        
+        List<QuizAttempt> attempts = quizAttemptRepository.findByQuizIdAndUserIdOrderByAttemptNumberAsc(quiz.getId(), userId);
         
         for (QuizAttempt attempt : attempts) {
             if (attempt.getStatus() == AttemptStatus.IN_PROGRESS) {
@@ -104,7 +109,7 @@ public class QuizTakingService {
         QuizAttempt attempt = quizAttemptRepository.findByIdAndUserId(attemptId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Attempt not found"));
                 
-        if (!attempt.getQuiz().getId().equals(quizId)) {
+        if (!attempt.getQuiz().getId().equals(quizId) && !attempt.getQuiz().getLesson().getId().equals(quizId)) {
             throw new ConflictException("Attempt does not belong to the specified quiz");
         }
         
@@ -206,7 +211,11 @@ public class QuizTakingService {
     public List<QuizAttemptResponse> getAttemptHistory(UUID userId, UUID courseId, UUID quizId) {
         validateEnrollment(userId, courseId);
         
-        List<QuizAttempt> attempts = quizAttemptRepository.findByQuizIdAndUserIdOrderByAttemptNumberAsc(quizId, userId);
+        Quiz quiz = quizRepository.findById(quizId)
+                .or(() -> quizRepository.findByLessonId(quizId))
+                .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
+                
+        List<QuizAttempt> attempts = quizAttemptRepository.findByQuizIdAndUserIdOrderByAttemptNumberAsc(quiz.getId(), userId);
         return attempts.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -231,6 +240,7 @@ public class QuizTakingService {
         validateEnrollment(userId, courseId);
         
         Quiz quiz = quizRepository.findById(quizId)
+                .or(() -> quizRepository.findByLessonId(quizId))
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
                 
         List<com.edtech.platform.quiz.dto.student.StudentQuestionResponse> questionResponses = quiz.getQuestions().stream()

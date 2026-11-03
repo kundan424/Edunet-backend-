@@ -61,8 +61,8 @@ public class MediaService {
             throw new IllegalArgumentException("Lesson does not belong to this course");
         }
 
-        if (lesson.getLessonType() != LessonType.VIDEO) {
-            throw new IllegalArgumentException("Media can only be uploaded to VIDEO lessons");
+        if (lesson.getLessonType() != LessonType.VIDEO && lesson.getLessonType() != LessonType.RESOURCE) {
+            throw new IllegalArgumentException("Media can only be uploaded to VIDEO or RESOURCE lessons");
         }
 
         // Delete existing media asset if any
@@ -81,11 +81,17 @@ public class MediaService {
             asset.setLesson(lesson);
             asset.setOriginalFileName(file.getOriginalFilename());
             asset.setStorageKey(storageKey);
-            asset.setContentType(file.getContentType() != null ? file.getContentType() : "video/mp4");
+            String defaultContentType = lesson.getLessonType() == LessonType.RESOURCE ? "application/octet-stream" : "video/mp4";
+            asset.setContentType(file.getContentType() != null ? file.getContentType() : defaultContentType);
             asset.setFileSize(file.getSize());
             asset.setProcessingStatus(ProcessingStatus.READY); // Immediate for local
-            // durationSeconds omitted or mock value
-            asset.setDurationSeconds(0);
+            int duration = lesson.getLessonType() == LessonType.RESOURCE ? 0 : 60;
+            asset.setDurationSeconds(duration);
+            
+            if (lesson.getDurationSeconds() == null || lesson.getDurationSeconds() == 0) {
+                lesson.setDurationSeconds(lesson.getLessonType() == LessonType.RESOURCE ? 1 : 60);
+                lessonRepository.save(lesson);
+            }
             
             return mediaAssetRepository.save(asset);
         } catch (IOException e) {
@@ -113,6 +119,8 @@ public class MediaService {
             try {
                 mediaStorageService.delete(asset.getStorageKey());
                 mediaAssetRepository.delete(asset);
+                lesson.setDurationSeconds(null);
+                lessonRepository.save(lesson);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to delete media", e);
             }
