@@ -77,7 +77,7 @@ public class StudentDashboardRepository {
     public List<ContinueLearningDTO> getContinueLearning(UUID studentId, int limit) {
         String sql = "SELECT c.id as course_id, c.title as course_title, l.id as lesson_id, l.title as lesson_title, " +
                      "COALESCE(lp.last_position_seconds, 0) as last_position_seconds, " +
-                     "COALESCE(lp.updated_at, e.created_at) as updated_at, " +
+                     "COALESCE(lp.updated_at, CAST(e.enrolled_at AS TIMESTAMP)) as updated_at, " +
                      "(SELECT COUNT(lp2.id) FROM lesson_progress lp2 WHERE lp2.course_id = c.id AND lp2.user_id = ? AND lp2.status = 'COMPLETED') as completed_lessons, " +
                      "(SELECT COUNT(l2.id) FROM lessons l2 JOIN sections s2 ON l2.section_id = s2.id WHERE s2.course_id = c.id) as total_lessons " +
                      "FROM enrollments e " +
